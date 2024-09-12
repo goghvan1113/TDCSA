@@ -193,7 +193,7 @@ if __name__ == "__main__":
     args = parser.parse_args() # 解析命令行参数
     args.model_name = "pretrain_models/" + args.model_name
 
-    seed = 400
+    seed = 42
     seed_everything(seed)
     metrics = main(args)
     metrics["seed"] = seed
@@ -204,6 +204,9 @@ if __name__ == "__main__":
         df = pd.DataFrame(columns = metrics.keys())
     df = df._append(metrics, ignore_index=True)
     df.to_csv("output/results.csv", index=False)
+
+
+
 
 
 
