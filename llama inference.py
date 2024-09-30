@@ -4,12 +4,12 @@ from tqdm import tqdm
 import pandas as pd
 import random
 import numpy as np
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, matthews_corrcoef
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 import json
-
+import os
 
 seed = 42
-model_name = 'Qwen2-7B-Instruct'
+model_name = 'Qwen2.5-7B-Instruct'
 model_dir = f'./pretrain_models/{model_name}'
 device = 'cuda:0'
 
@@ -37,25 +37,35 @@ def test():
     real_labels = df['Sentiment'].tolist()
 
     print("Total texts: ", len(texts))
-    print("Positive labels: , Negative labels: ,Neutral labels: ", real_labels.count(1), real_labels.count(2),
-          real_labels.count(0))
+    print(f"Positive labels: {real_labels.count(1)}, Negative labels: {real_labels.count(2)},Neutral labels: {real_labels.count(0)}")
 
     pred_labels = []
     exception_responses = []
 
     # prompt source: https://github.com/aielte-research/LlamBERT/blob/main/LLM/model_inputs/IMDB/promt_eng_0-shot_prompts.json
     for text in tqdm(texts):
-        prompt = text
+        system_prompt = \
+        f'''
+            You are an expert in scientific citation sentiment analysis who can judge the attitude of a citation text. Please answer with \'positive\' , \'neutral\' or \'negative\' only!
+            
+            Here are some examples to guide your judgment:
+            1. Citation: "This study provides significant insights into the field and supports the growing body of evidence on climate change." 
+               Sentiment: positive
+               
+            2. Citation: "While the methodology is sound, the results are largely inconclusive and require further investigation."
+               Sentiment: neutral
+               
+            3. Citation: "The analysis lacks rigor and fails to account for critical variables, making the conclusions unreliable."
+               Sentiment: negative
+               
+           If the citation text is positive, indicating approval, agreement, or support for the research, please answer \'positive\'. If the citation text is neutral, meaning it does not express a clear opinion or sentiment, please answer \'neutral\'. If the citation text is negative, indicating criticism, disagreement, or rejection of the research, please answer \'negative\'. Make your decision based on the overall tone and content of the citation. If the sentiment is unclear, default to \'neutral\'.
+        '''
+        user_prompt = f'Decide if the following scientific citation text expresses a positive, neutral, or negative sentiment towards the research or findings: \n {text} \n'
 
-        messages = [{
-            'role':
-                'system',
-            'content':
-                'You are an expert in scientific citation sentiment analysis who can judge the attitude of a citation text. Please answer with \'positive\' , \'neutral\' or \'negative\' only!\n'
-        }]
-        prompt = f'Decide if the following scientific citation text expresses a positive, neutral, or negative sentiment towards the research or findings: \n {prompt} \nIf the citation text is positive, indicating approval, agreement, or support for the research, please answer \'positive\'. If the citation text is neutral, meaning it does not express a clear opinion or sentiment, please answer \'neutral\'. If the citation text is negative, indicating criticism, disagreement, or rejection of the research, please answer \'negative\'. Make your decision based on the overall tone and content of the citation. If the sentiment is unclear, default to \'neutral\'.'
-
-        messages.append({'role': 'user', 'content': prompt})
+        messages = [
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': user_prompt}
+        ]
 
         text = tokenizer.apply_chat_template(messages,
                                              tokenize=False,
@@ -67,7 +77,7 @@ def test():
                                     device=device)
         generated_ids = model.generate(
             model_input.input_ids,
-            max_new_tokens=512,
+            max_new_tokens=16,
             attention_mask=attention_mask,
             pad_token_id=tokenizer.eos_token_id,
         )
@@ -95,21 +105,25 @@ def test():
 
     acc = accuracy_score(real_labels, pred_labels)
     f1 = f1_score(real_labels, pred_labels, average='macro')
-    precision = precision_score(real_labels, pred_labels)
-    recall = recall_score(real_labels, pred_labels)
-    mcc = matthews_corrcoef(real_labels, pred_labels)
+    precision = precision_score(real_labels, pred_labels, average='macro')
+    recall = recall_score(real_labels, pred_labels, average='macro')
 
-    df = pd.read_csv('./output/llm_results.csv')
+    file_path = './output/llm_results.csv'
+    if not os.path.exists(file_path):
+        df = pd.DataFrame(columns=['model_name', 'seed', 'accuracy', 'f1', 'precision', 'recall'])
+        df.to_csv(file_path, index=False)
+    else:
+        df = pd.read_csv(file_path)
 
     df = df._append(
         {
-            'model_name': 'qwen2-7b',
+            'model_name': model_name,
             'seed': seed,
             'accuracy': acc,
             'f1': f1,
             'precision': precision,
             'recall': recall,
-            'mcc': mcc
+            'shots': 3
         },
         ignore_index=True)
     df.to_csv('./output/llm_results.csv', index=False)
@@ -118,7 +132,7 @@ def test():
 
 
 def label_unsupervised():
-    df = pd.read_csv('./data/citation_paper_contexts_unlabeled.csv')
+    df = pd.read_csv('./data/citing_paper_contexts_unlabeled.csv')
     texts = df['text'].tolist()
 
     pred_labels = []
@@ -126,7 +140,6 @@ def label_unsupervised():
 
     # prompt source:
     for text in tqdm(texts):
-        print(f'Enter a prompt to generate a response:')
         prompt = text
 
         messages = [{
@@ -149,7 +162,7 @@ def label_unsupervised():
                                     device=device)
         generated_ids = model.generate(
             model_input.input_ids,
-            max_new_tokens=512,
+            max_new_tokens=16,
             attention_mask=attention_mask,
             pad_token_id=tokenizer.eos_token_id,
         )
@@ -175,8 +188,9 @@ def label_unsupervised():
 
         print(f'{response} \n')
 
-    json.dump(pred_labels,
-              open('output/unsupervised_labels.json', 'w'), indent=2)
+    df['sentiment'] = pred_labels
+    df.to_csv('./data/citing_paper_contexts_llm.csv', index=False)
+
     print("exception_responses: ", exception_responses)
 
 
