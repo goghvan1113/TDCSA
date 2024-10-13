@@ -1,0 +1,27 @@
+{
+    "model_name": "roberta-llama3.1405B-twitter-sentiment",
+    "avg_results": {
+        "eval_loss": 0.10481115058064461,
+        "eval_Accuracy": 0.897689880549921,
+        "eval_Weighted Accuracy": 0.9391536391636073,
+        "eval_F1": 0.6662355018374887,
+        "eval_Precision": 0.6710489346762532,
+        "eval_Recall": 0.6673095499493787,
+        "eval_runtime": 1.2849400000000002,
+        "eval_samples_per_second": 640.0776,
+        "eval_steps_per_second": 20.4389,
+        "epoch": 5.0
+    },
+    "test_results": {
+        "eval_loss": 0.09178168326616287,
+        "eval_Accuracy": 0.8781609195402299,
+        "eval_Weighted Accuracy": 0.9332612710148455,
+        "eval_F1": 0.6069429211966221,
+        "eval_Precision": 0.613809631642512,
+        "eval_Recall": 0.6047262643648186,
+        "eval_runtime": 2.3809,
+        "eval_samples_per_second": 365.412,
+        "eval_steps_per_second": 11.76,
+        "epoch": 5.0
+    }
+}

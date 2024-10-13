@@ -32,7 +32,7 @@ def seed_everything(seed):
     print(device)
 
 def test():
-    df = pd.read_csv('./data/citation_sentiment_corpus_new.csv')
+    df = pd.read_csv('../data/citation_sentiment_corpus_new.csv')
     texts = df['Citation_Text'].tolist()
     real_labels = df['Sentiment'].tolist()
 
@@ -108,7 +108,7 @@ def test():
     precision = precision_score(real_labels, pred_labels, average='macro')
     recall = recall_score(real_labels, pred_labels, average='macro')
 
-    file_path = './output/llm_results.csv'
+    file_path = '../output/llm_results.csv'
     if not os.path.exists(file_path):
         df = pd.DataFrame(columns=['model_name', 'seed', 'accuracy', 'f1', 'precision', 'recall'])
         df.to_csv(file_path, index=False)
@@ -132,7 +132,7 @@ def test():
 
 
 def label_unsupervised():
-    df = pd.read_csv('./data/citing_paper_contexts_unlabeled.csv')
+    df = pd.read_csv('../data/citing_paper_contexts_unlabeled.csv')
     texts = df['text'].tolist()
 
     pred_labels = []

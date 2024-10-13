@@ -81,7 +81,7 @@ def balance_dataset(df):
 
 def main():
     seed_everything(seed)
-    df = pd.read_csv('./data/citation_sentiment_corpus_new.csv')
+    df = pd.read_csv('../data/citation_sentiment_corpus_new.csv')
     balanced_df = balance_dataset(df)
     balanced_df.to_csv('./data/citation_sentiment_corpus_balanced.csv', index=False)
     print("Balanced dataset saved to './data/citation_sentiment_corpus_balanced.csv'")
