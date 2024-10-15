@@ -1,0 +1,180 @@
+[
+  {
+    "text": "al., 1994), compression of sentences with Automatic Translation approaches (Knight and Marcu, 2000), Hidden Markov Model (Jing and McKeown, 2000), Topic Signatures based methods (Lin and Hovy, 2000, Lacatusu et al., 2006) are among the most popular techniques that have been used in the summarization systems of this category.",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "popular",
+      "automatic translation",
+      "effective"
+    ]
+  },
+  {
+    "text": "But in fact, the issue of editing in text summarization has usually been neglected, notable exceptions being the works by Jing and McKeown (2000) and Mani, Gates, and Bloedorn (1999).",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "neglected",
+      "notable",
+      "exceptions"
+    ]
+  },
+  {
+    "text": "Jing and McKeown (2000) have proposed a rule-based algorithm for sentence combination, but no results have been reported.",
+    "sentiment": "negative",
+    "sentiment_words": [
+      "no results",
+      "proposed",
+      "none reported"
+    ]
+  },
+  {
+    "text": "The recent approach for editing extracted text spans (Jing and McKeown, 2000) may also produce improvement for our algorithm.",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "recent",
+      "improved",
+      "potential"
+    ]
+  },
+  {
+    "text": "Recent comparisons of approaches that can be trained on corpora (van Halteren et al. , 1998; Volk and Schneider, 1998) have shown that in most cases statistical aproaches (Cutting et al. , 1992; Schmid, 1995; Ratnaparkhi, 1996) yield better results than finite-state, rule-based, or memory-based taggers (Brill, 1993; Daelemans et al. , 1996).",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "better",
+      "statistical",
+      "improved"
+    ]
+  },
+  {
+    "text": "One of the most effective taggers based on a pure HMM is that developed at Xerox (Cutting et al. , 1992).",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "Effective",
+      "Pure"
+    ]
+  },
+  {
+    "text": "4.1 Complete ambiguity classes Ambiguity classes capture the relevant property we are interested in: words with the same category possibilities are grouped together.4 And ambiguity classes have been shown to be successfully employed, in a variety of ways, to improve POS tagging (e.g., Cutting et al., 1992; Daelemans et al., 1996; Dickinson, 2007; Goldberg et al., 2008; Tseng et al., 2005).",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "Successful",
+      "effectively",
+      "improved"
+    ]
+  },
+  {
+    "text": "A number of part-of-speech taggers are readily available and widely used, all trained and retrainable on text corpora (Church 1988; Cutting et al. 1992; Brill 1992; Weischedel et al. 1993).",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "readily available",
+      "widely used"
+    ]
+  },
+  {
+    "text": "(Cutting et al. , 1992) reported very high results (96% on the Brown corpus) for unsupervised POS tagging using Hidden Markov Models (HMMs) by exploiting hand-built tag dictionaries and equivalence classes.",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "high",
+      "very",
+      "high results"
+    ]
+  },
+  {
+    "text": "Stochastic models (Cutting et al. , 1992; Dermatas et al. , 1995; Brants, 2000) have been widely used in POS tagging for simplicity and language independence of the models.",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "widely used",
+      "simplicity",
+      "language independence"
+    ]
+  },
+  {
+    "text": "1 Motivation Statistical part-of-speech disambiguation can be efficiently done with n-gram models (Church, 1988; Cutting et al. , 1992).",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "Efficiently",
+      "done",
+      "effectively"
+    ]
+  },
+  {
+    "text": "It has been known for some years that good performance can be realized with partial tagging and a hidden Markov model (Cutting et al. , 1992).",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "good",
+      "known",
+      "achievable"
+    ]
+  },
+  {
+    "text": "Many approaches for POS tagging have been developed in the past, including rule-based tagging (Brill, 1995), HMM taggers (Brants, 2000; Cutting and others, 1992), maximum-entropy models (Rathnaparki, 1996), cyclic dependency networks (Toutanova et al. , 2003), memory-based learning (Daelemans et al. , 1996), etc. All of these approaches require either a large amount of annotated training data (for supervised tagging) or a lexicon listing all possible tags for each word (for unsupervised tagging).",
+    "sentiment": "negative",
+    "sentiment_words": [
+      "flawed",
+      "limited",
+      "inadequate"
+    ]
+  },
+  {
+    "text": "Brill's results demonstrate that this approach can outperform the Hidden Markov Model approaches that are frequently used for part-of-speech tagging (Jelinek, 1985; Church, 1988; DeRose, 1988; Cutting et al. , 1992; Weischedel et al. , 1993), as well as showing promise for other applications.",
+    "sentiment": "negative",
+    "sentiment_words": [
+      "outperforms",
+      "frequently used",
+      "shows promise"
+    ]
+  },
+  {
+    "text": "Several papers have looked at higher-order representations, but have not examined the equivalence of syn/para distributions when formalized as Markov chains (Schutze and Pedersen, 1993; Lund and Burgess, 1996; Edmonds, 1997; Rapp, 2002; Biemann et al., 2004; Lemaire and Denhi`ere, 2006).",
+    "sentiment": "negative",
+    "sentiment_words": [
+      "Limited context available \nHowever",
+      "since the text has a neutral description without any explicit positive/negative statements about the studies mentioned it's challenging to accurately determine three exact sentiment-representing words. Nonetheless I'll attempt to provide some based on common criticisms often found within academic literature reviews:\n\nNot addressed",
+      "Limited research",
+      "Lack sufficient"
+    ]
+  },
+  {
+    "text": "Eigenvector centrality in particular has been successfully applied to many different types of networks, including hyperlinked web pages (Brin and Page, 1998; Kleinberg, 1998), lexical networks (Erkan and Radev, 2004; Mihalcea and Tarau, 2004; Kurland and Lee, 2005; Kurland and Lee, 2006), and semantic networks (Mihalcea et al. , 2004).",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "successfully",
+      "applied",
+      "positive results"
+    ]
+  },
+  {
+    "text": "This method was preferred against other related methods, like the one introduced in (Mihalcea et al., 2004), since it embeds all the available semantic information existing in WordNet, even edges that cross POS, thus offering a richer semantic representation.",
+    "sentiment": "negative",
+    "sentiment_words": [
+      "richer",
+      "preferred",
+      "semantic"
+    ]
+  },
+  {
+    "text": "First, such a system makes use of lexical information when modeling reordering (Lopez, 2008), which has previously been shown to be useful in German-to-English translation (Koehn et al., 2008).",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "useful",
+      "previous research"
+    ]
+  },
+  {
+    "text": "(Macken et al., 2008) showed that the results for French-English were competitive to state-of-the-art alignment systems.",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "Competitive",
+      "State-of-art",
+      "Positive"
+    ]
+  },
+  {
+    "text": "Then the same system weights are applied to both IncHMM and Joint Decoding -based approaches, and the feature weights of them are trained using the max-BLEU training method proposed by Och (2003) and refined by Moore and Quirk (2008).",
+    "sentiment": "positive",
+    "sentiment_words": [
+      "maximized",
+      "trained",
+      "refined"
+    ]
+  }
+]
