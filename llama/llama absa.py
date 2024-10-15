@@ -126,8 +126,8 @@ def main():
     seed_everything(seed)
 
     csv_path = '../data/citation_sentiment_corpus.csv'
-    output_dir = '../output/aspect_pairs.json'
-    model_name = 'Meta-Llama-3.1-8B-Instruct'
+    output_dir = '../output/sentiment_absa_results.json'
+    model_name = 'Qwen2.5-32B-Instruct-GPTQ-Int4'
     model_dir = f'../pretrain_models/{model_name}'
     device = 'cuda:0'
     tokenizer = AutoTokenizer.from_pretrained(model_dir)

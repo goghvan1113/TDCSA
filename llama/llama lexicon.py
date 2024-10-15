@@ -127,7 +127,7 @@ def main():
 
     csv_path = '../data/citation_sentiment_corpus.csv'
     output_dir = '../output'
-    model_name = 'Meta-Llama-3.1-8B-Instruct'
+    model_name = 'Qwen2.5-32B-Instruct-GPTQ-Int4'
     model_dir = f'../pretrain_models/{model_name}'
     device = 'cuda:0'
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
