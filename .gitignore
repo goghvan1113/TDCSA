@@ -3,3 +3,5 @@
 /logs/
 /data/controllable-citation-generation/
 /bert/results/
+/data/SciCite/
+/data/custom_datasets/

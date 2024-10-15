@@ -27,6 +27,7 @@ def main(args):
 
     device = torch.device(args.device)
     model_dir = f"../pretrain_models/{args.model_name}"
+    # model_dir = f"../citation_finetuned_models/{args.model_name}_cpt"
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = CustomBERTModel.from_pretrained(model_dir, num_labels=num_labels, id2label=id2label, label2id=label2id).to(device)
 
@@ -49,7 +50,7 @@ def main(args):
         learning_rate=args.learning_rate,
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
-        lr_scheduler_type='cosine',
+        lr_scheduler_type=args.lr_scheduler_type,
         gradient_accumulation_steps=args.accumulation_steps,
         weight_decay=args.weight_decay,
         warmup_ratio=args.warmup_ratio,
@@ -96,6 +97,7 @@ def main(args):
     plot_confusion_matrix(test_labels, test_preds, list(label2id.keys()))
 
     results = {
+        'cls': 'sentiment',
         'seed': args.seed,
         'eval_result': eval_result,
         'train_time': train_time,
@@ -107,12 +109,21 @@ def main(args):
         'accumulation_steps': args.accumulation_steps,
         'warmup_steps': args.warmup_steps,
         'warmup_ratio': args.warmup_ratio,
-        'loss_type': args.loss_type
+        'loss_type': args.loss_type,
+        'lr_scheduler_type': args.lr_scheduler_type,
     }
 
-    with open(f'../output/bert_results.json', 'w') as f:
-        json.dump(results, f, indent=4)
-    
+    json_file_path = '../output/bert_training_details.json'
+    if os.path.exists(json_file_path):
+        with open(json_file_path, 'r') as f:
+            existing_results = json.load(f)
+    else:
+        existing_results = []
+    existing_results.append(results)
+    with open(json_file_path, 'w') as f:
+        json.dump(existing_results, f, indent=4)
+
+    mytest(args, trainer, tokenizer)
 
 
 def seed_everything(seed):
@@ -244,16 +255,54 @@ def compute_metrics(pred):
     }
 
 def load_sentiment_datasets(test_size=0.4, seed=42):
-    df = pd.read_csv(f'../data/citation_sentiment_corpus.csv')
+    df = pd.read_csv(f'../data/citation_sentiment_corpus_balanced.csv')
 
-    label_map = {'o': 0, 'p': 1, 'n': 2}
-    df['Sentiment'] = df['Sentiment'].map(label_map)
+    # label_map = {'o': 0, 'p': 1, 'n': 2}
+    # df['Sentiment'] = df['Sentiment'].map(label_map)
 
     train_texts, temp_texts, train_labels, temp_labels = train_test_split(df['Citation_Text'].tolist(), df['Sentiment'].tolist(), test_size=test_size, stratify=df['Sentiment'], random_state=seed)
     val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5, stratify=temp_labels, random_state=seed)
     
     return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
 
+def mytest(args, trainer, tokenizer):
+    model_dir = f'./citation_finetuned_models/{args.model_name}'
+    trainer.save_model(model_dir)
+
+    def load_sentiment_datasets(test_size=0.4, seed=42):
+        df = pd.read_csv(f'../data/citation_sentiment_corpus.csv')
+
+        label_map = {'o': 0, 'p': 1, 'n': 2}
+        df['Sentiment'] = df['Sentiment'].map(label_map)
+
+        train_texts, temp_texts, train_labels, temp_labels = train_test_split(df['Citation_Text'].tolist(),
+                                                                              df['Sentiment'].tolist(),
+                                                                              test_size=test_size,
+                                                                              stratify=df['Sentiment'],
+                                                                              random_state=seed)
+        val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5,
+                                                                          stratify=temp_labels, random_state=seed)
+
+        return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
+
+    test_texts, test_labels, _, _, _, _, = load_sentiment_datasets(test_size=0.1, seed=args.seed)
+    test_dataset = SentimentDataset(tokenizer(test_texts, truncation=True, padding=True, return_tensors='pt', max_length=512),
+                             test_labels)
+    predictions = trainer.predict(test_dataset)
+    preds = predictions.predictions.argmax(-1)
+
+    # Compute metrics
+    accuracy = accuracy_score(test_labels, preds)
+    precision, recall, f1, _ = precision_recall_fscore_support(test_labels, preds, average='macro')
+
+    # Print metrics
+    print(f"Accuracy: {accuracy:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"F1 Score: {f1:.4f}")
+
+    label2id = {"Neutral": 0, "Positive": 1, "Negative": 2}
+    plot_confusion_matrix(test_labels, preds, list(label2id.keys()))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()  # 创建命令行解析对象
@@ -261,10 +310,11 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
     parser.add_argument('--epochs', type=int, default=3, help='Number of epochs')
     parser.add_argument('--accumulation_steps', type=int, default=1, help='Gradient accumulation steps')
-    parser.add_argument('--learning_rate', type=float, default=2e-5, help='Learning rate')
+    parser.add_argument('--learning_rate', type=float, default=2e-5, help='Learning rate') #2e-5
     parser.add_argument('--warmup_steps', type=int, default=100, help='Number of warmup steps')
+    parser.add_argument('--lr_scheduler_type', type=str, default='cosine', help='Learning rate scheduler type')
     parser.add_argument('--loss_type', type=str, default='focal_loss', help='Loss type')
-    parser.add_argument('--weight_decay', type=float, default=0.01, help='Weight decay')
+    parser.add_argument('--weight_decay', type=float, default=0.05, help='Weight decay') # 0.01
     parser.add_argument('--warmup_ratio', type=float, default=0.1, help='Warmup ratio')
     parser.add_argument('--device', type=str, default='cuda:0', help='Device')
     parser.add_argument('--seed', type=int, default=42, help='Seed')

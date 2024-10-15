@@ -8,15 +8,6 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 import json
 import os
 
-seed = 42
-model_name = 'Qwen2.5-7B-Instruct'
-model_dir = f'./pretrain_models/{model_name}'
-device = 'cuda:0'
-
-tokenizer = AutoTokenizer.from_pretrained(model_dir)
-model = AutoModelForCausalLM.from_pretrained(model_dir,
-                                             torch_dtype='auto',
-                                             device_map=device)
 
 def seed_everything(seed):
     random.seed(seed)
@@ -31,7 +22,7 @@ def seed_everything(seed):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
 
-def test():
+def test(model, tokenizer, device):
     df = pd.read_csv('../data/citation_sentiment_corpus_new.csv')
     texts = df['Citation_Text'].tolist()
     real_labels = df['Sentiment'].tolist()
@@ -67,14 +58,9 @@ def test():
             {'role': 'user', 'content': user_prompt}
         ]
 
-        text = tokenizer.apply_chat_template(messages,
-                                             tokenize=False,
-                                             add_generation_prompt=True)
-
-        model_input = tokenizer([text], return_tensors='pt').to(device)
-        attention_mask = torch.ones(model_input.input_ids.shape,
-                                    dtype=torch.long,
-                                    device=device)
+        input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        model_input = tokenizer([input_text], return_tensors='pt').to(device)
+        attention_mask = torch.ones(model_input.input_ids.shape, dtype=torch.long, device=device)
         generated_ids = model.generate(
             model_input.input_ids,
             max_new_tokens=16,
@@ -195,6 +181,14 @@ def label_unsupervised():
 
 
 if __name__ == '__main__':
+    seed = 42
     seed_everything(seed)
-    test()
+
+    model_name = 'Qwen2.5-7B-Instruct'
+    model_dir = f'./pretrain_models/{model_name}'
+    device = 'cuda:0'
+
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    model = AutoModelForCausalLM.from_pretrained(model_dir, torch_dtype='auto', attn_implementation='flash_attention_2', device_map=device)
+    test(model, tokenizer, device)
     # label_unsupervised()

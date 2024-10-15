@@ -99,6 +99,7 @@ def main(args):
     plot_confusion_matrix(test_labels, test_preds, list(label2id.keys()))
 
     results = {
+        'cls': 'intent',
         'seed': args.seed,
         'eval_result': eval_result,
         'train_time': train_time,
@@ -113,8 +114,15 @@ def main(args):
         'loss_type': args.loss_type
     }
 
-    with open(f'../output/bert_results.json', 'w') as f:
-        json.dump(results, f, indent=4)
+    json_file_path = '../output/bert_training_details.json'
+    if os.path.exists(json_file_path):
+        with open(json_file_path, 'r') as f:
+            existing_results = json.load(f)
+    else:
+        existing_results = []
+    existing_results.append(results)
+    with open(json_file_path, 'w') as f:
+        json.dump(existing_results, f, indent=4)
 
 
 def seed_everything(seed):
