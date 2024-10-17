@@ -31,7 +31,7 @@ def main(args):
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = CustomBERTModel.from_pretrained(model_dir, num_labels=num_labels, id2label=id2label, label2id=label2id).to(device)
 
-    train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = load_sentiment_datasets(test_size=test_size, seed=args.seed)
+    train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = load_sentiment_datasets(test_size=test_size, seed=args.seed, csv_path='../data/citation_sentiment_corpus_balanced.csv')
     train_data = SentimentDataset(tokenizer(train_texts, truncation=True, padding=True, return_tensors='pt', max_length=512), train_labels)
     val_data = SentimentDataset(tokenizer(val_texts, truncation=True, padding=True, return_tensors='pt', max_length=512), val_labels)
     test_data = SentimentDataset(tokenizer(test_texts, truncation=True, padding=True, return_tensors='pt', max_length=512), test_labels)
@@ -254,38 +254,28 @@ def compute_metrics(pred):
         'F1': f1,
     }
 
-def load_sentiment_datasets(test_size=0.4, seed=42):
-    df = pd.read_csv(f'../data/citation_sentiment_corpus_balanced.csv')
+def load_sentiment_datasets(test_size=0.4, seed=42, csv_path='../data/citation_sentiment_corpus.csv'):
+    df = pd.read_csv(csv_path)
+    if csv_path == '../data/citation_sentiment_corpus.csv':
+        label_map = {'o': 0, 'p': 1, 'n': 2}
+        df['Sentiment'] = df['Sentiment'].map(label_map)
+    elif csv_path == '../data/citation_sentiment_corpus_balanced.csv':
+        df = df[(df['Source'] == 'new') & (df['Sentiment'].isin([1, 2])) | (df['Source'] == 'original') & (
+                    df['Sentiment'] == 0)]
 
-    # label_map = {'o': 0, 'p': 1, 'n': 2}
-    # df['Sentiment'] = df['Sentiment'].map(label_map)
+    train_texts, temp_texts, train_labels, temp_labels = train_test_split(df['Citation_Text'].tolist(),
+                                                                          df['Sentiment'].tolist(), test_size=test_size,
+                                                                          stratify=df['Sentiment'], random_state=seed)
+    val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5,
+                                                                      stratify=temp_labels, random_state=seed)
 
-    train_texts, temp_texts, train_labels, temp_labels = train_test_split(df['Citation_Text'].tolist(), df['Sentiment'].tolist(), test_size=test_size, stratify=df['Sentiment'], random_state=seed)
-    val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5, stratify=temp_labels, random_state=seed)
-    
     return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
 
 def mytest(args, trainer, tokenizer):
-    model_dir = f'./citation_finetuned_models/{args.model_name}'
-    trainer.save_model(model_dir)
+    # model_dir = f'../citation_finetuned_models/{args.model_name}'
+    # trainer.save_model(model_dir)
 
-    def load_sentiment_datasets(test_size=0.4, seed=42):
-        df = pd.read_csv(f'../data/citation_sentiment_corpus.csv')
-
-        label_map = {'o': 0, 'p': 1, 'n': 2}
-        df['Sentiment'] = df['Sentiment'].map(label_map)
-
-        train_texts, temp_texts, train_labels, temp_labels = train_test_split(df['Citation_Text'].tolist(),
-                                                                              df['Sentiment'].tolist(),
-                                                                              test_size=test_size,
-                                                                              stratify=df['Sentiment'],
-                                                                              random_state=seed)
-        val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5,
-                                                                          stratify=temp_labels, random_state=seed)
-
-        return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
-
-    test_texts, test_labels, _, _, _, _, = load_sentiment_datasets(test_size=0.1, seed=args.seed)
+    test_texts, test_labels, _, _, _, _, = load_sentiment_datasets(test_size=0.1, seed=args.seed, csv_path='../data/citation_sentiment_corpus.csv')
     test_dataset = SentimentDataset(tokenizer(test_texts, truncation=True, padding=True, return_tensors='pt', max_length=512),
                              test_labels)
     predictions = trainer.predict(test_dataset)
@@ -306,7 +296,7 @@ def mytest(args, trainer, tokenizer):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()  # 创建命令行解析对象
-    parser.add_argument('--model_name', type=str, default='roberta-llama3.1405B-twitter-sentiment',help='Model name or path')  # 添加命令行参数
+    parser.add_argument('--model_name', type=str, default='sentiment-roberta-large-english-3-classes',help='Model name or path')  # 添加命令行参数
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
     parser.add_argument('--epochs', type=int, default=3, help='Number of epochs')
     parser.add_argument('--accumulation_steps', type=int, default=1, help='Gradient accumulation steps')

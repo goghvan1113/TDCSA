@@ -409,5 +409,83 @@
         "warmup_ratio": 0.1,
         "loss_type": "focal_loss",
         "lr_scheduler_type": "cosine"
+    },
+    {
+        "cls": "sentiment",
+        "seed": 42,
+        "eval_result": {
+            "eval_loss": 0.08267292380332947,
+            "eval_Accuracy": 0.9016018306636155,
+            "eval_Precision": 0.6816163832836745,
+            "eval_Recall": 0.6128392995310206,
+            "eval_F1": 0.6424373640826525,
+            "eval_runtime": 2.197,
+            "eval_samples_per_second": 397.812,
+            "eval_steps_per_second": 12.745,
+            "epoch": 3.0
+        },
+        "train_time": 204,
+        "model_name": "roberta-llama3.1405B-twitter-sentiment",
+        "batch_size": 32,
+        "epochs": 3,
+        "learning_rate": 2e-05,
+        "weight_decay": 0.05,
+        "accumulation_steps": 1,
+        "warmup_steps": 100,
+        "warmup_ratio": 0.1,
+        "loss_type": "focal_loss",
+        "lr_scheduler_type": "cosine"
+    },
+    {
+        "cls": "sentiment",
+        "seed": 42,
+        "eval_result": {
+            "eval_loss": 0.08267292380332947,
+            "eval_Accuracy": 0.9016018306636155,
+            "eval_Precision": 0.6816163832836745,
+            "eval_Recall": 0.6128392995310206,
+            "eval_F1": 0.6424373640826525,
+            "eval_runtime": 2.1908,
+            "eval_samples_per_second": 398.94,
+            "eval_steps_per_second": 12.781,
+            "epoch": 3.0
+        },
+        "train_time": 214,
+        "model_name": "roberta-llama3.1405B-twitter-sentiment",
+        "batch_size": 32,
+        "epochs": 3,
+        "learning_rate": 2e-05,
+        "weight_decay": 0.05,
+        "accumulation_steps": 1,
+        "warmup_steps": 100,
+        "warmup_ratio": 0.1,
+        "loss_type": "focal_loss",
+        "lr_scheduler_type": "cosine"
+    },
+    {
+        "cls": "sentiment",
+        "seed": 42,
+        "eval_result": {
+            "eval_loss": 0.049745991826057434,
+            "eval_Accuracy": 0.95,
+            "eval_Precision": 0.9443472255584148,
+            "eval_Recall": 0.950007610492889,
+            "eval_F1": 0.9467908229087234,
+            "eval_runtime": 2.5773,
+            "eval_samples_per_second": 349.204,
+            "eval_steps_per_second": 11.252,
+            "epoch": 3.0
+        },
+        "train_time": 234,
+        "model_name": "roberta-llama3.1405B-twitter-sentiment",
+        "batch_size": 32,
+        "epochs": 3,
+        "learning_rate": 2e-05,
+        "weight_decay": 0.05,
+        "accumulation_steps": 1,
+        "warmup_steps": 100,
+        "warmup_ratio": 0.1,
+        "loss_type": "focal_loss",
+        "lr_scheduler_type": "cosine"
     }
 ]

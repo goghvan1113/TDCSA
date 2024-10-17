@@ -344,8 +344,8 @@ def compute_metrics(pred):
     }
 
 
-def load_sentiment_datasets(test_size=0.4, seed=42):
-    df = pd.read_csv(f'../data/citation_sentiment_corpus.csv')
+def load_sentiment_datasets(test_size=0.4, seed=42, csv_path='../data/citation_sentiment_corpus.csv'):
+    df = pd.read_csv(csv_path)
 
     label_map = {'o': 0, 'p': 1, 'n': 2}
     df['Sentiment'] = df['Sentiment'].map(label_map)
@@ -360,26 +360,10 @@ def load_sentiment_datasets(test_size=0.4, seed=42):
 
 
 def mytest(args, trainer, tokenizer):
-    model_dir = f'./citation_finetuned_models/{args.model_name}'
-    trainer.save_model(model_dir)
+    # model_dir = f'../citation_finetuned_models/{args.model_name}'
+    # trainer.save_model(model_dir)
 
-    def load_sentiment_datasets(test_size=0.4, seed=42):
-        df = pd.read_csv(f'../data/citation_sentiment_corpus.csv')
-
-        label_map = {'o': 0, 'p': 1, 'n': 2}
-        df['Sentiment'] = df['Sentiment'].map(label_map)
-
-        train_texts, temp_texts, train_labels, temp_labels = train_test_split(df['Citation_Text'].tolist(),
-                                                                              df['Sentiment'].tolist(),
-                                                                              test_size=test_size,
-                                                                              stratify=df['Sentiment'],
-                                                                              random_state=seed)
-        val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5,
-                                                                          stratify=temp_labels, random_state=seed)
-
-        return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
-
-    test_texts, test_labels, _, _, _, _, = load_sentiment_datasets(test_size=0.1, seed=args.seed)
+    test_texts, test_labels, _, _, _, _, = load_sentiment_datasets(test_size=0.1, seed=args.seed, csv_path='../data/citation_sentiment_corpus.csv')
     test_dataset = SentimentDataset(
         tokenizer(test_texts, truncation=True, padding=True, return_tensors='pt', max_length=512),
         test_labels)

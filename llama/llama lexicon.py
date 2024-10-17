@@ -7,11 +7,13 @@ from tqdm import tqdm
 import random
 import numpy as np
 import os
+import re
 import pandas as pd
 import json
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-
+from transformers import AutoTokenizer
+from sklearn.metrics.pairwise import cosine_similarity
 from torch.utils.data import Dataset
 from collections import Counter
 
@@ -28,15 +30,15 @@ def seed_everything(seed):
 
 def extract_sentiment_words(text, sentiment, tokenizer, model, device):
     system_prompt = '''
-        You are an AI assistant specialized in analyzing the sentiment of scientific citations. Your task is to extract exactly 3 sentiment-related words or short phrases (1-2 words) that best represent the emotional tone of each given scientific citation. Focus on concise, impactful words that capture the essence of the sentiment.
+        You are an AI assistant specialized in analyzing the sentiment of scientific citations. Your task is to extract exactly 1-3 sentiment-related words or short phrases (up to 3 words) that best represent the emotional tone of each given scientific citation. Focus on concise, impactful words that capture the essence of the sentiment.
 
         Guidelines:
-        1. Extract EXACTLY 3 words or short phrases, no more, no less.
-        2. Each word or phrase should be 1-2 words long.
+        1. Extract 1-3 words or short phrases, no more, each word or phrase should be 1-3 words long.
+        2. Do not extract unnecessary or neutral terms if only 1 or 2 word clearly reflects the emotional tone.
         3. Focus on adjectives, adverbs, or short noun phrases that convey sentiment.
         4. Avoid full sentences or long explanations.
         5. Ensure the words/phrases directly relate to the sentiment of the citation.
-        6. If you can't find 3 distinct sentiment words/phrases, you may repeat a word/phrase, but try to avoid this if possible.
+        6. If you can't find any distinct sentiment words/phrases, you may repeat a word/phrase, but try to avoid this if possible.
     
         Remember, brevity and relevance are key.
 
@@ -51,12 +53,13 @@ def extract_sentiment_words(text, sentiment, tokenizer, model, device):
         '''
 
     user_prompt = f'''
-        Analyze the sentiment of the following scientific citation. Extract EXACTLY 3 words or short phrases (1-2 words each) that best represent the emotional tone of the citation. 
+        Analyze the sentiment of the following scientific citation. Extract 1-3 words or short phrases (1-3 words each) that best represent the emotional tone of the citation. 
         
         Text: {text}
         Sentiment: {sentiment}
 
-        Please respond with only the extracted words, separated by commas if there are multiple.
+        Please respond with only the extracted words and provide the results in the following format:(word/phrases 2 and 3 are optional)
+        [word/phrase 1], [word/phrase 2], [word/phrase 3]
         '''
 
     messages = [
@@ -81,6 +84,7 @@ def extract_sentiment_words(text, sentiment, tokenizer, model, device):
     )
     generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in zip(model_input.input_ids, generated_ids)] # remove the input text
     response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
+    print(response)
 
     # Extract the sentiment words from the response
     sentiment_words = response.split("Assistant:")[-1].strip().split(", ")
@@ -137,7 +141,59 @@ def main():
     save_results(results, f"{output_dir}/sentiment_lexicon_results.json")
     save_sentiment_dictionary(sentiment_lexicon, f"{output_dir}/sentiment_lexicon.json")
 
+def clean_lexicon(input_file, output_file):
+    with open(input_file, 'r', encoding='utf-8') as f:
+        sentiment_dict = json.load(f)
+
+    cleaned_dict = {}
+    for sentiment, words in sentiment_dict.items():
+        cleaned_dict[sentiment] = {}
+        for phrase, count in words.items():
+            # 删除包含非英语字符的词
+            if not re.match(r'^[a-zA-Z\s\-\[\]]+$', phrase):
+                continue
+
+            # 删除中括号并保留内容
+            cleaned_phrase = phrase.replace('[', '').replace(']', '')
+
+            # 如果是超过3个单词的短语，跳过
+            if len(cleaned_phrase.split()) > 3:
+                continue
+
+            # 如果词已经在字典中，累加它们的出现次数
+            if cleaned_phrase in cleaned_dict[sentiment]:
+                cleaned_dict[sentiment][cleaned_phrase] += count
+            else:
+                cleaned_dict[sentiment][cleaned_phrase] = count
+
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(cleaned_dict, f, ensure_ascii=False, indent=2)
+
+# 计算词汇相似性并进行归并
+def merge_similar_words(embeddings, threshold=0.9):
+    tokenizer = AutoTokenizer.from_pretrained(f"../pretrain_models/roberta-llama3.1405B-twitter-sentiment")
+    merged_dict = {}
+    word_list = list(embeddings.keys())
+
+    for i, word1 in enumerate(word_list):
+        merged_to = word1
+        if word1 in merged_dict:
+            continue
+        for j, word2 in enumerate(word_list[i+1:], i+1):
+            # 计算词嵌入的余弦相似度
+            similarity = cosine_similarity([embeddings[word1]], [embeddings[word2]])[0][0]
+            if similarity >= threshold:
+                # 使用相似度较高的词的BPE分词
+                token1 = tokenizer.tokenize(word1)
+                token2 = tokenizer.tokenize(word2)
+                merged_to = min(token1, token2, key=lambda x: len(x))  # 选择较短的BPE子词
+                merged_dict[word2] = merged_to
+        merged_dict[word1] = merged_to
+
+    return merged_dict
+
 if __name__=='__main__':
-    main()
+    # main()
+    clean_lexicon('../output/sentiment_lexicon.json',  '../output/cleaned_sentiment_lexicon.json')
 
 

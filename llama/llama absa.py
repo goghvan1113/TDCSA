@@ -87,7 +87,7 @@ def extract_aspect_pairs(text, sentiment, tokenizer, model, device):
         top_p=0.95,
     )
     response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
-
+    # print(response)
     # 解析模型输出，提取 aspect-pairs
     aspect_pairs = []
     for line in response.split('\n'):
