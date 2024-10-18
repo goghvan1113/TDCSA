@@ -487,5 +487,57 @@
         "warmup_ratio": 0.1,
         "loss_type": "focal_loss",
         "lr_scheduler_type": "cosine"
+    },
+    {
+        "cls": "sentiment",
+        "seed": 42,
+        "eval_result": {
+            "eval_loss": 0.05192061513662338,
+            "eval_Accuracy": 0.9544444444444444,
+            "eval_Precision": 0.9493557638388208,
+            "eval_Recall": 0.9541458420645496,
+            "eval_F1": 0.9513465272501418,
+            "eval_runtime": 210.9543,
+            "eval_samples_per_second": 4.266,
+            "eval_steps_per_second": 0.137,
+            "epoch": 3.0
+        },
+        "train_time": 27755,
+        "model_name": "sentiment-roberta-large-english-3-classes",
+        "batch_size": 32,
+        "epochs": 3,
+        "learning_rate": 2e-05,
+        "weight_decay": 0.05,
+        "accumulation_steps": 1,
+        "warmup_steps": 100,
+        "warmup_ratio": 0.1,
+        "loss_type": "focal_loss",
+        "lr_scheduler_type": "cosine"
+    },
+    {
+        "cls": "sentiment",
+        "seed": 42,
+        "eval_result": {
+            "eval_loss": 0.05557209998369217,
+            "eval_Accuracy": 0.9380530973451328,
+            "eval_Precision": 0.8056883268436156,
+            "eval_Recall": 0.8554847103189235,
+            "eval_F1": 0.8280776576546364,
+            "eval_runtime": 1.469,
+            "eval_samples_per_second": 538.445,
+            "eval_steps_per_second": 17.018,
+            "epoch": 3.0
+        },
+        "train_time": 181,
+        "model_name": "roberta-llama3.1405B-twitter-sentiment",
+        "batch_size": 32,
+        "epochs": 3,
+        "learning_rate": 2e-05,
+        "weight_decay": 0.05,
+        "accumulation_steps": 1,
+        "warmup_steps": 100,
+        "warmup_ratio": 0.1,
+        "loss_type": "focal_loss",
+        "lr_scheduler_type": "cosine"
     }
 ]

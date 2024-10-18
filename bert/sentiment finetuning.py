@@ -22,8 +22,8 @@ from plot_results import plot_roc_curve, plot_pr_curve, plot_confusion_matrix
 def main(args):
     num_labels = 3
     test_size = 0.2
-    id2label={0:"Neutral", 1:"Positive", 2:"Negative"}
-    label2id={"Neutral":0, "Positive":1, "Negative":2}
+    id2label={1:"Neutral", 2:"Positive", 0:"Negative"}
+    label2id={"Neutral":1, "Positive":2, "Negative":0}
 
     device = torch.device(args.device)
     model_dir = f"../pretrain_models/{args.model_name}"
@@ -31,7 +31,7 @@ def main(args):
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = CustomBERTModel.from_pretrained(model_dir, num_labels=num_labels, id2label=id2label, label2id=label2id).to(device)
 
-    train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = load_sentiment_datasets(test_size=test_size, seed=args.seed, csv_path='../data/citation_sentiment_corpus_balanced.csv')
+    train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = load_sentiment_datasets(test_size=test_size, seed=args.seed, filepath='../data/corpus.txt')
     train_data = SentimentDataset(tokenizer(train_texts, truncation=True, padding=True, return_tensors='pt', max_length=512), train_labels)
     val_data = SentimentDataset(tokenizer(val_texts, truncation=True, padding=True, return_tensors='pt', max_length=512), val_labels)
     test_data = SentimentDataset(tokenizer(test_texts, truncation=True, padding=True, return_tensors='pt', max_length=512), test_labels)
@@ -254,18 +254,32 @@ def compute_metrics(pred):
         'F1': f1,
     }
 
-def load_sentiment_datasets(test_size=0.4, seed=42, csv_path='../data/citation_sentiment_corpus.csv'):
-    df = pd.read_csv(csv_path)
-    if csv_path == '../data/citation_sentiment_corpus.csv':
-        label_map = {'o': 0, 'p': 1, 'n': 2}
+def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/citation_sentiment_corpus.csv'):
+    sentences, labels = [], []
+    if filepath == '../data/citation_sentiment_corpus.csv':
+        df = pd.read_csv(filepath)
+        label_map = {'o': 1, 'p': 2, 'n': 0}
         df['Sentiment'] = df['Sentiment'].map(label_map)
-    elif csv_path == '../data/citation_sentiment_corpus_balanced.csv':
+        sentences = df['Citation_Text'].tolist()
+        labels = df['Sentiment'].tolist()
+    elif filepath == '../data/citation_sentiment_corpus_balanced.csv':
+        df = pd.read_csv(filepath)
         df = df[(df['Source'] == 'new') & (df['Sentiment'].isin([1, 2])) | (df['Source'] == 'original') & (
-                    df['Sentiment'] == 0)]
+                    df['Sentiment'] == 0)] # 只选取新数据集中的正负样本和原始数据集中的中性样本
+        sentences = df['Citation_Text'].tolist()
+        labels = df['Sentiment'].tolist()
+    elif filepath == '../data/corpus.txt':
+        with open(filepath, "r", encoding="utf8") as f:
+            file = f.read().split("\n")
+            file = [i.split("\t") for i in file]
+            for i in file:
+                if len(i) == 2:
+                    sentences.append(i[1])
+                    labels.append(int(i[0]))
 
-    train_texts, temp_texts, train_labels, temp_labels = train_test_split(df['Citation_Text'].tolist(),
-                                                                          df['Sentiment'].tolist(), test_size=test_size,
-                                                                          stratify=df['Sentiment'], random_state=seed)
+    train_texts, temp_texts, train_labels, temp_labels = train_test_split(sentences,
+                                                                          labels, test_size=test_size,
+                                                                          stratify=labels, random_state=seed)
     val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5,
                                                                       stratify=temp_labels, random_state=seed)
 
@@ -275,7 +289,7 @@ def mytest(args, trainer, tokenizer):
     # model_dir = f'../citation_finetuned_models/{args.model_name}'
     # trainer.save_model(model_dir)
 
-    test_texts, test_labels, _, _, _, _, = load_sentiment_datasets(test_size=0.1, seed=args.seed, csv_path='../data/citation_sentiment_corpus.csv')
+    test_texts, test_labels, _, _, _, _, = load_sentiment_datasets(test_size=0.1, seed=args.seed, filepath='../data/citation_sentiment_corpus.csv')
     test_dataset = SentimentDataset(tokenizer(test_texts, truncation=True, padding=True, return_tensors='pt', max_length=512),
                              test_labels)
     predictions = trainer.predict(test_dataset)
@@ -291,12 +305,12 @@ def mytest(args, trainer, tokenizer):
     print(f"Recall: {recall:.4f}")
     print(f"F1 Score: {f1:.4f}")
 
-    label2id = {"Neutral": 0, "Positive": 1, "Negative": 2}
+    label2id = {"Neutral": 1, "Positive": 2, "Negative": 0}
     plot_confusion_matrix(test_labels, preds, list(label2id.keys()))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()  # 创建命令行解析对象
-    parser.add_argument('--model_name', type=str, default='sentiment-roberta-large-english-3-classes',help='Model name or path')  # 添加命令行参数
+    parser.add_argument('--model_name', type=str, default='roberta-llama3.1405B-twitter-sentiment',help='Model name or path')  # 添加命令行参数
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
     parser.add_argument('--epochs', type=int, default=3, help='Number of epochs')
     parser.add_argument('--accumulation_steps', type=int, default=1, help='Gradient accumulation steps')
