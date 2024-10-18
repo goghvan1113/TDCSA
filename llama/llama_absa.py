@@ -101,13 +101,14 @@ def extract_aspect_pairs(text, sentiment, tokenizer, model, device):
 
     return aspect_pairs
 
-def process_dataset(csv_path, tokenizer, model, device):
-    df = pd.read_csv(csv_path)
-    label_map = {'o': 'neutral', 'p': 'positive', 'n': 'negative'}
-    df['Sentiment'] = df['Sentiment'].map(label_map)
+def process_dataset(file_path, tokenizer, model, device):
+    sentences, labels = load_sentiment_datasets(filepath=file_path, is_spilit=False)
+    label_map = {0: 'neutral', 1: 'positive', 2: 'negative'}
+    labels = labels.map(label_map)
 
+    df = pd.DataFrame({'Citation_Text': sentences, 'Sentiment': labels})
     df = df[df['Sentiment'].isin(['positive', 'negative'])]
-
+    df = df.head(5) # 测试用
     results = []
     for _, row in tqdm(df.iterrows(), desc="Processing citations", total=len(df)):
         aspect_pairs = extract_aspect_pairs(row['Citation_Text'], row['Sentiment'], tokenizer, model, device)
@@ -126,7 +127,7 @@ def main():
     seed = 42
     seed_everything(seed)
 
-    csv_path = '../data/citation_sentiment_corpus.csv'
+    file_path = '../data/corpus.txt'
     output_dir = '../output/sentiment_absa_results.json'
     model_name = 'Meta-Llama-3.1-8B-Instruct'
     model_dir = f'../pretrain_models/{model_name}'
@@ -135,7 +136,7 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(model_dir, torch_dtype=torch.bfloat16,
                                                  attn_implementation='flash_attention_2', device_map=device)
 
-    res = process_dataset(csv_path, tokenizer, model, device)
+    res = process_dataset(file_path, tokenizer, model, device)
     save_results(res, output_dir)
 
 if __name__ == '__main__':

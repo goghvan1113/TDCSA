@@ -254,7 +254,7 @@ def compute_metrics(pred):
         'F1': f1,
     }
 
-def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/citation_sentiment_corpus.csv'):
+def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt', is_spilit=True):
     sentences, labels = [], []
     if filepath == '../data/citation_sentiment_corpus.csv':
         df = pd.read_csv(filepath)
@@ -285,14 +285,15 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/citation_s
                         label = 2
                     sentences.append(sentence)
                     labels.append(label)
-
-    train_texts, temp_texts, train_labels, temp_labels = train_test_split(sentences,
-                                                                          labels, test_size=test_size,
-                                                                          stratify=labels, random_state=seed)
-    val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5,
-                                                                      stratify=temp_labels, random_state=seed)
-
-    return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
+    if is_spilit:
+        train_texts, temp_texts, train_labels, temp_labels = train_test_split(sentences,
+                                                                              labels, test_size=test_size,
+                                                                              stratify=labels, random_state=seed)
+        val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5,
+                                                                          stratify=temp_labels, random_state=seed)
+        return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
+    else:
+        return sentences, labels
 
 def mytest(args, trainer, tokenizer):
     # model_dir = f'../citation_finetuned_models/{args.model_name}'
