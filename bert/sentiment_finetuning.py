@@ -22,8 +22,8 @@ from plot_results import plot_roc_curve, plot_pr_curve, plot_confusion_matrix
 def main(args):
     num_labels = 3
     test_size = 0.2
-    id2label={1:"Neutral", 2:"Positive", 0:"Negative"}
-    label2id={"Neutral":1, "Positive":2, "Negative":0}
+    id2label={0:"Neutral", 1:"Positive", 2:"Negative"}
+    label2id={"Neutral":0, "Positive":1, "Negative":2}
 
     device = torch.device(args.device)
     model_dir = f"../pretrain_models/{args.model_name}"
@@ -258,7 +258,7 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/citation_s
     sentences, labels = [], []
     if filepath == '../data/citation_sentiment_corpus.csv':
         df = pd.read_csv(filepath)
-        label_map = {'o': 1, 'p': 2, 'n': 0}
+        label_map = {'o': 0, 'p': 1, 'n': 2}
         df['Sentiment'] = df['Sentiment'].map(label_map)
         sentences = df['Citation_Text'].tolist()
         labels = df['Sentiment'].tolist()
@@ -274,8 +274,17 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/citation_s
             file = [i.split("\t") for i in file]
             for i in file:
                 if len(i) == 2:
-                    sentences.append(i[1])
-                    labels.append(int(i[0]))
+                    sentence = i[1]
+                    label = int(i[0])
+                    # Map labels: 2 -> Positive, 1 -> Neutral, 0 -> Negative
+                    if label == 2:
+                        label = 1
+                    elif label == 1:
+                        label = 0
+                    elif label == 0:
+                        label = 2
+                    sentences.append(sentence)
+                    labels.append(label)
 
     train_texts, temp_texts, train_labels, temp_labels = train_test_split(sentences,
                                                                           labels, test_size=test_size,
@@ -305,7 +314,7 @@ def mytest(args, trainer, tokenizer):
     print(f"Recall: {recall:.4f}")
     print(f"F1 Score: {f1:.4f}")
 
-    label2id = {"Neutral": 1, "Positive": 2, "Negative": 0}
+    label2id = {"Neutral": 0, "Positive": 1, "Negative": 2}
     plot_confusion_matrix(test_labels, preds, list(label2id.keys()))
 
 if __name__ == '__main__':

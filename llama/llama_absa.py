@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 
 from torch.utils.data import Dataset
 from collections import Counter
+from bert.sentiment_finetuning import load_sentiment_datasets
 
 
 def seed_everything(seed):
@@ -127,7 +128,7 @@ def main():
 
     csv_path = '../data/citation_sentiment_corpus.csv'
     output_dir = '../output/sentiment_absa_results.json'
-    model_name = 'Qwen2.5-32B-Instruct-GPTQ-Int4'
+    model_name = 'Meta-Llama-3.1-8B-Instruct'
     model_dir = f'../pretrain_models/{model_name}'
     device = 'cuda:0'
     tokenizer = AutoTokenizer.from_pretrained(model_dir)

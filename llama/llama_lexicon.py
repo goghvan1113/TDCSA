@@ -193,7 +193,7 @@ def merge_similar_words(embeddings, threshold=0.9):
     return merged_dict
 
 if __name__=='__main__':
-    # main()
-    clean_lexicon('../output/sentiment_lexicon.json',  '../output/cleaned_sentiment_lexicon.json')
+    main()
+    # clean_lexicon('../output/sentiment_lexicon.json',  '../output/cleaned_sentiment_lexicon.json')
 
 
