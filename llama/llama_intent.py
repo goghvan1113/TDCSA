@@ -1,16 +1,11 @@
 import argparse
 import torch
-from torch.utils.data import DataLoader, Dataset
-from transformers import AutoModel, AutoTokenizer, get_scheduler, AutoModelForCausalLM
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from tqdm import tqdm
 import random
 import numpy as np
-import os
 import pandas as pd
-import json
 from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
 
 
 def seed_everything(seed):
@@ -24,46 +19,43 @@ def seed_everything(seed):
     torch.backends.cudnn.benchmark = False
 
 
-def extract_aspect_pairs(text, sentiment, tokenizer, model, device):
+def classify_intent(text, tokenizer, model, device):
     system_prompt = '''
-        You are an AI assistant specialized in analyzing scientific citations and extracting aspect-pairs (aspect and corresponding sentiment) from them. Your task is to identify key aspects discussed in the citation and determine the sentiment associated with each aspect. 
+    You are an AI assistant specialized in analyzing scientific citations and classifying their intent. Your task is to categorize each citation into one of four categories: background, method, result, or unknown.
 
-        Guidelines:
-        1. Extract between 1 to 3 aspect-pairs from each citation.
-        2. An aspect can be any specific element of the research being cited, such as methodology, results, implications, innovation, etc.
-        3. The sentiment for each aspect should be clearly positive or negative.
-        4. Provide your response in a structured format: Aspect: [aspect], Sentiment: [positive/negative]
-        5. Ensure that the extracted aspects are relevant and significant to the overall sentiment of the citation.
+    Guidelines:
+    1. Classify each citation as either 'background', 'method', 'result', or 'unknown'.
+    2. Provide a confidence score between 0 and 1 for your classification.
+    3. Use 'unknown' if the citation doesn't clearly fit into the other categories.
+    4. Consider the following when classifying:
+       - 'background': The citation provides background information or additional context about a relevant problem , concept , approach , or topic
+       - 'method': The citation refers to the use of a specific method , tool , approach , or dataset from the reference paper.
+       - 'result': The citation compares or contrasts the results or findings of the manuscript with those in the reference paper.
+       - 'unknown': Use when the intent is unclear or doesn't fit the other categories.
 
-        Remember, the overall sentiment of the citation is provided, but individual aspects within the citation may have different sentiments.
+    Provide your response in this format:
+    Intent: [intent], Confidence: [score]
 
-        Example 1 (Positive):
-        Text: This groundbreaking study provides compelling evidence for the effectiveness of the new treatment, demonstrating significant improvement in patient outcomes across multiple metrics.
-        Overall Sentiment: Positive
-        Aspect-pairs:
-        Aspect: Study quality, Sentiment: Positive
-        Aspect: Treatment effectiveness, Sentiment: Positive
-        Aspect: Patient outcomes, Sentiment: Positive
-
-        Example 2 (Negative):
-        Text: While the paper attempts to address an important issue, its methodology is flawed and the conclusions drawn are not adequately supported by the limited data presented.
-        Overall Sentiment: Negative
-        Aspect-pairs:
-        Aspect: Research topic, Sentiment: Positive
-        Aspect: Methodology, Sentiment: Negative
-        Aspect: Data support, Sentiment: Negative
-
-        '''
+    Example:
+    Text: "These #REFR in which the optimal strategy maximizes the expected reward under the most adversarial distribution over the uncertainty set."
+    Response: Intent: background, Confidence: 0.85
+    
+    Text: "These indicators were developed because evidences have been published that this data is -similar to bibliometric data -field-and time-dependent (see, e.g., #REFR ."
+    Response: Intent: method, Confidence: 0.90
+    
+    Text: "In the case of uniformly bounded delays, the derived link between epoch and time sequence enables us to compare our rates in the strongly convex case (Theorem 3.1) with the ones obtained for PIAG #REFR 27, 28]"
+    Response: Intent: result, Confidence: 0.80
+    '''
 
     user_prompt = f'''
-        Analyze the following scientific citation and extract 1 to 3 aspect-pairs (aspect and sentiment):
+    Classify the intent of the following scientific citation:
 
-        Text: {text}
-        Overall Sentiment: {sentiment}
+    Text: {text}
 
-        Please provide the aspect-pairs in the following format:
-        Aspect: [aspect], Sentiment: [positive/negative]
-        '''
+    Please provide the classification in the following format:
+    Intent: [intent], Confidence: [score]
+    '''
+
     messages = [
         {'role': 'system', 'content': system_prompt},
         {'role': 'user', 'content': user_prompt}
@@ -75,7 +67,7 @@ def extract_aspect_pairs(text, sentiment, tokenizer, model, device):
     attention_mask = torch.ones(model_input.input_ids.shape, dtype=torch.long, device=device)
     generated_ids = model.generate(
         model_input.input_ids,
-        max_new_tokens=128,
+        max_new_tokens=64,
         num_return_sequences=1,
         attention_mask=attention_mask,
         pad_token_id=tokenizer.eos_token_id,
@@ -84,18 +76,18 @@ def extract_aspect_pairs(text, sentiment, tokenizer, model, device):
         top_p=0.95,
     )
     response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
-    # print(response)
-    # 解析模型输出，提取 aspect-pairs
-    aspect_pairs = []
+
+    # 解析模型输出
+    intent, confidence = 'unknown', 0.0
     for line in response.split('\n'):
-        if line.startswith('Aspect:'):
+        if line.startswith('Intent:'):
             parts = line.split(',')
             if len(parts) == 2:
-                aspect = parts[0].replace('Aspect:', '').strip()
-                sentiment = parts[1].replace('Sentiment:', '').strip()
-                aspect_pairs.append({'aspect': aspect, 'sentiment': sentiment})
+                intent = parts[0].replace('Intent:', '').strip().lower()
+                confidence = float(parts[1].replace('Confidence:', '').strip())
 
-    return aspect_pairs
+    return intent, confidence
+
 
 def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt', is_split=True):
     sentences, labels = [], []
@@ -138,43 +130,44 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt
     else:
         return sentences, labels
 
-def process_dataset(file_path, tokenizer, model, device):
-    sentences, labels = load_sentiment_datasets(filepath=file_path, is_split=False)
-    label_map = {0: 'neutral', 1: 'positive', 2: 'negative'}
-    labels = [label_map[label] for label in labels]
 
-    df = pd.DataFrame({'Citation_Text': sentences, 'Sentiment': labels})
-    df = df[df['Sentiment'].isin(['positive', 'negative'])]
-    # df = df.head(5) # 测试用
+def process_dataset(sentences, labels, tokenizer, model, device):
     results = []
-    for _, row in tqdm(df.iterrows(), desc="Processing citations", total=len(df)):
-        aspect_pairs = extract_aspect_pairs(row['Citation_Text'], row['Sentiment'], tokenizer, model, device)
+    for sentence, sentiment in tqdm(zip(sentences, labels), desc="Processing citations", total=len(sentences)):
+        intent, confidence = classify_intent(sentence, tokenizer, model, device)
         results.append({
-            'text': row['Citation_Text'],
-            'overall_sentiment': row['Sentiment'],
-            'aspect_pairs': aspect_pairs
+            'text': sentence,
+            'sentiment': sentiment,
+            'intent': intent,
+            'confidence': confidence
         })
     return results
 
+
 def save_results(results, output_file):
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
+    df = pd.DataFrame(results)
+    df.to_csv(output_file, index=False)
+    print(f"Results saved to {output_file}")
+
 
 def main():
     seed = 42
     seed_everything(seed)
 
     file_path = '../data/corpus.txt'
-    output_dir = '../output/sentiment_absa_results.json'
+    output_dir = '../output/corpus_with_intent.csv'
     model_name = 'Meta-Llama-3.1-8B-Instruct'
     model_dir = f'../pretrain_models/{model_name}'
     device = 'cuda:0'
+
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = AutoModelForCausalLM.from_pretrained(model_dir, torch_dtype=torch.bfloat16,
                                                  attn_implementation='flash_attention_2', device_map=device)
 
-    res = process_dataset(file_path, tokenizer, model, device)
-    save_results(res, output_dir)
+    sentences, labels = load_sentiment_datasets(filepath=file_path, is_split=False)
+    results = process_dataset(sentences, labels, tokenizer, model, device)
+    save_results(results, output_dir)
+
 
 if __name__ == '__main__':
     main()

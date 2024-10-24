@@ -55,9 +55,9 @@ def plot_pr_curve(labels, probs):
 
 
 def plot_confusion_matrix(y_true, y_pred, labels):
-    cm = confusion_matrix(y_true, y_pred)
+    cm = confusion_matrix(y_true, y_pred, normalize='true')
     fig, ax = plt.subplots(figsize=(8, 6))
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
-    disp.plot(cmap='Blues', values_format='d', ax=ax)
-    plt.title('Confusion Matrix')
+    disp.plot(cmap='Blues', values_format='.2f', ax=ax, colorbar=False)
+    plt.title('Normalized Confusion Matrix')
     plt.show()

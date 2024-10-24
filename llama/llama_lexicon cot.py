@@ -112,14 +112,55 @@ def extract_sentiment_words(text, sentiment, tokenizer, model, device):
 
     return sentiment_words, reasoning
 
+def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt', is_split=True):
+    sentences, labels = [], []
+    if filepath == '../data/citation_sentiment_corpus.csv':
+        df = pd.read_csv(filepath)
+        label_map = {'o': 0, 'p': 1, 'n': 2}
+        df['Sentiment'] = df['Sentiment'].map(label_map)
+        sentences = df['Citation_Text'].tolist()
+        labels = df['Sentiment'].tolist()
+    elif filepath == '../data/citation_sentiment_corpus_balanced.csv':
+        df = pd.read_csv(filepath)
+        df = df[(df['Source'] == 'new') & (df['Sentiment'].isin([1, 2])) | (df['Source'] == 'original') & (
+                    df['Sentiment'] == 0)] # 只选取新数据集中的正负样本和原始数据集中的中性样本
+        sentences = df['Citation_Text'].tolist()
+        labels = df['Sentiment'].tolist()
+    elif filepath == '../data/corpus.txt':
+        with open(filepath, "r", encoding="utf8") as f:
+            file = f.read().split("\n")
+            file = [i.split("\t") for i in file]
+            for i in file:
+                if len(i) == 2:
+                    sentence = i[1]
+                    label = int(i[0])
+                    # Map labels: 2 -> Positive, 1 -> Neutral, 0 -> Negative
+                    if label == 2:
+                        label = 1
+                    elif label == 1:
+                        label = 0
+                    elif label == 0:
+                        label = 2
+                    sentences.append(sentence)
+                    labels.append(label)
+    if is_split:
+        train_texts, temp_texts, train_labels, temp_labels = train_test_split(sentences,
+                                                                              labels, test_size=test_size,
+                                                                              stratify=labels, random_state=seed)
+        val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5,
+                                                                          stratify=temp_labels, random_state=seed)
+        return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
+    else:
+        return sentences, labels
 
-def process_dataset(csv_path, tokenizer, model, device):
-    df = pd.read_csv(csv_path)
-    label_map = {'o': 'neutral', 'p': 'positive', 'n': 'negative'}
-    df['Sentiment'] = df['Sentiment'].map(label_map)
+def process_dataset(file_path, tokenizer, model, device):
+    sentences, labels = load_sentiment_datasets(filepath=file_path, is_split=False)
+    label_map = {0: 'neutral', 1: 'positive', 2: 'negative'}
+    labels = [label_map[label] for label in labels]
 
+    df = pd.DataFrame({'Citation_Text': sentences, 'Sentiment': labels})
     df = df[df['Sentiment'].isin(['positive', 'negative'])]
-    df = df.head(10)
+    # df = df.head(5) # 测试用
     results = []
     sentiment_dictionary = {'positive': Counter(), 'negative': Counter()}
 

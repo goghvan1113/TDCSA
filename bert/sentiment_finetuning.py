@@ -9,7 +9,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from sklearn.utils import shuffle
 from transformers import TrainerCallback
+from sklearn.model_selection import KFold
 from huggingface_hub import notebook_login
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
@@ -21,17 +23,18 @@ from plot_results import plot_roc_curve, plot_pr_curve, plot_confusion_matrix
 
 def main(args):
     num_labels = 3
-    test_size = 0.2
+    test_size = 0.4
     id2label={0:"Neutral", 1:"Positive", 2:"Negative"}
     label2id={"Neutral":0, "Positive":1, "Negative":2}
 
     device = torch.device(args.device)
+    filepath = '../data/corpus.txt'
     model_dir = f"../pretrain_models/{args.model_name}"
     # model_dir = f"../citation_finetuned_models/{args.model_name}_cpt"
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = CustomBERTModel.from_pretrained(model_dir, num_labels=num_labels, id2label=id2label, label2id=label2id).to(device)
 
-    train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = load_sentiment_datasets(test_size=test_size, seed=args.seed, filepath='../data/corpus.txt')
+    train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = load_sentiment_datasets(test_size=test_size, seed=args.seed, filepath=filepath)
     train_data = SentimentDataset(tokenizer(train_texts, truncation=True, padding=True, return_tensors='pt', max_length=512), train_labels)
     val_data = SentimentDataset(tokenizer(val_texts, truncation=True, padding=True, return_tensors='pt', max_length=512), val_labels)
     test_data = SentimentDataset(tokenizer(test_texts, truncation=True, padding=True, return_tensors='pt', max_length=512), test_labels)
@@ -62,7 +65,7 @@ def main(args):
         eval_steps=50,
         disable_tqdm=False,
         fp16= True, # faster and use less memory
-        metric_for_best_model='F1',
+        metric_for_best_model='F1_Macro',
         save_total_limit=2,
         load_best_model_at_end=True,
         greater_is_better=True,
@@ -86,44 +89,16 @@ def main(args):
     train_time = int(end - start)
     print(f"Training took: {train_time} seconds")
     eval_result = trainer.evaluate()
-    loss_recorder.plot_and_save_metrics(f'../output')
+    loss_recorder.plot_metrics()
 
     # Evaluate on the test set
     test_result = trainer.predict(test_data)
     test_preds = test_result.predictions.argmax(-1)
     test_labels = test_data.labels
-    plot_roc_curve(test_labels, test_result.predictions)
-    plot_pr_curve(test_labels, test_result.predictions)
-    plot_confusion_matrix(test_labels, test_preds, list(label2id.keys()))
 
-    results = {
-        'cls': 'sentiment',
-        'seed': args.seed,
-        'eval_result': eval_result,
-        'train_time': train_time,
-        'model_name': args.model_name,
-        'batch_size': args.batch_size,
-        'epochs': args.epochs,
-        'learning_rate': args.learning_rate,
-        'weight_decay': args.weight_decay,
-        'accumulation_steps': args.accumulation_steps,
-        'warmup_steps': args.warmup_steps,
-        'warmup_ratio': args.warmup_ratio,
-        'loss_type': args.loss_type,
-        'lr_scheduler_type': args.lr_scheduler_type,
-    }
-
-    json_file_path = '../output/bert_training_details.json'
-    if os.path.exists(json_file_path):
-        with open(json_file_path, 'r') as f:
-            existing_results = json.load(f)
-    else:
-        existing_results = []
-    existing_results.append(results)
-    with open(json_file_path, 'w') as f:
-        json.dump(existing_results, f, indent=4)
-
-    mytest(args, trainer, tokenizer)
+    # Save results and plot metrics
+    save_results(args, eval_result, test_result, train_time, label2id, test_labels, test_preds)
+    # mytest(args, trainer, tokenizer)
 
 
 def seed_everything(seed):
@@ -197,7 +172,8 @@ class LossRecorderCallback(TrainerCallback):
     def __init__(self):
         self.train_losses = []
         self.eval_losses = []
-        self.f1_scores = []
+        self.f1_scores_macro = []
+        self.f1_scores_micro = []
         self.accuracies = []
 
     def on_log(self, args, state, control, logs=None, **kwargs):
@@ -205,12 +181,14 @@ class LossRecorderCallback(TrainerCallback):
             self.train_losses.append(logs['loss'])
         if 'eval_loss' in logs:
             self.eval_losses.append(logs['eval_loss'])
-        if 'eval_F1' in logs:
-            self.f1_scores.append(logs['eval_F1'])
+        if 'eval_F1_Macro' in logs:
+            self.f1_scores_macro.append(logs['eval_F1_Macro'])
+        if 'eval_F1_Micro' in logs:
+            self.f1_scores_micro.append(logs['eval_F1_Micro'])
         if 'eval_Accuracy' in logs:
             self.accuracies.append(logs['eval_Accuracy'])
 
-    def plot_and_save_metrics(self, output_dir):
+    def plot_metrics(self):
         min_length = min(len(self.train_losses), len(self.eval_losses))
         steps = range(min_length)
 
@@ -220,14 +198,17 @@ class LossRecorderCallback(TrainerCallback):
         plt.plot(steps, self.eval_losses[:min_length], label='Validation Loss')
         plt.xlabel('Steps')
         plt.ylabel('Loss')
+        plt.grid()
         plt.legend()
         plt.title('Training and Validation Loss')
 
         # Plot F1 Score
         plt.subplot(2, 2, 2)
-        plt.plot(steps, self.f1_scores[:min_length], label='F1 Score')
+        plt.plot(steps, self.f1_scores_macro[:min_length], label='Macro F1 Score')
+        plt.plot(steps, self.f1_scores_micro[:min_length], label='Micro F1 Score')
         plt.xlabel('Steps')
         plt.ylabel('F1 Score')
+        plt.grid()
         plt.legend()
         plt.title('F1 Score')
 
@@ -236,6 +217,7 @@ class LossRecorderCallback(TrainerCallback):
         plt.plot(steps, self.accuracies[:min_length], label='Accuracy')
         plt.xlabel('Steps')
         plt.ylabel('Accuracy')
+        plt.grid()
         plt.legend()
         plt.title('Accuracy')
 
@@ -246,15 +228,19 @@ def compute_metrics(pred):
     labels = pred.label_ids
     preds = pred.predictions.argmax(-1)
     acc = accuracy_score(labels, preds)
-    precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='macro')
+    precision_macro, recall_macro, f1_macro, _ = precision_recall_fscore_support(labels, preds, average='macro')
+    precision_micro, recall_micro, f1_micro, _ = precision_recall_fscore_support(labels, preds, average='micro')
     return {
         'Accuracy': acc,
-        'Precision': precision,
-        'Recall': recall,
-        'F1': f1,
+        'Precision_Macro': precision_macro,
+        'Recall_Macro': recall_macro,
+        'F1_Macro': f1_macro,
+        'Precision_Micro': precision_micro,
+        'Recall_Micro': recall_micro,
+        'F1_Micro': f1_micro,
     }
 
-def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt', is_spilit=True):
+def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt', is_split=True):
     sentences, labels = [], []
     if filepath == '../data/citation_sentiment_corpus.csv':
         df = pd.read_csv(filepath)
@@ -285,21 +271,74 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt
                         label = 2
                     sentences.append(sentence)
                     labels.append(label)
-    if is_spilit:
+    elif filepath == '../data/CSA_raw_dataset/augmented_context_full/combined.csv':
+        df = pd.read_csv(filepath)
+        labelmap = {'Neutral': 0, 'Positive': 1, 'Negative': 2}
+        df['Sentiment'] = df['Sentiment'].map(labelmap)
+        sentences = df['Text'].tolist()
+        labels = df['Sentiment'].tolist()
+
+    if is_split:
         train_texts, temp_texts, train_labels, temp_labels = train_test_split(sentences,
                                                                               labels, test_size=test_size,
                                                                               stratify=labels, random_state=seed)
+        # df_aug = pd.read_csv('../data/train_data_aug3.csv')
+        # train_texts = df_aug['Citation_Text'].tolist()
+        # train_labels = df_aug['Sentiment'].tolist() # 替换增强后的整个数据集
+        # train_texts, train_labels = shuffle(train_texts, train_labels, random_state=seed) # 打乱新的训练集
+
         val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5,
                                                                           stratify=temp_labels, random_state=seed)
         return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
     else:
         return sentences, labels
 
+
+def save_results(args, eval_result, test_result, train_time, label2id, test_labels, test_preds):
+    plot_roc_curve(test_labels, test_result.predictions)
+    plot_pr_curve(test_labels, test_result.predictions)
+    plot_confusion_matrix(test_labels, test_preds, list(label2id.keys()))
+
+    accuracy = accuracy_score(test_labels, test_preds)
+    precision, recall, f1_macro, _ = precision_recall_fscore_support(test_labels, test_preds, average='macro')
+    precision_micro, recall_micro, f1_micro, _ = precision_recall_fscore_support(test_labels, test_preds, average='micro')
+    print(f"Test Accuracy: {accuracy:.4f}")
+    print(f"Test F1 Macro: {f1_macro:.4f}")
+    print(f"Test F1 Micro: {f1_micro:.4f}")
+
+    # Save results to JSON
+    results = {
+        'cls': 'sentiment',
+        'seed': args.seed,
+        'eval_result': eval_result,
+        'train_time': train_time,
+        'model_name': args.model_name,
+        'batch_size': args.batch_size,
+        'epochs': args.epochs,
+        'learning_rate': args.learning_rate,
+        'weight_decay': args.weight_decay,
+        'accumulation_steps': args.accumulation_steps,
+        'warmup_steps': args.warmup_steps,
+        'warmup_ratio': args.warmup_ratio,
+        'loss_type': args.loss_type,
+        'lr_scheduler_type': args.lr_scheduler_type,
+    }
+
+    json_file_path = '../output/bert_training_details.json'
+    if os.path.exists(json_file_path):
+        with open(json_file_path, 'r') as f:
+            existing_results = json.load(f)
+    else:
+        existing_results = []
+    existing_results.append(results)
+    with open(json_file_path, 'w') as f:
+        json.dump(existing_results, f, indent=4)
+
 def mytest(args, trainer, tokenizer):
     # model_dir = f'../citation_finetuned_models/{args.model_name}'
     # trainer.save_model(model_dir)
 
-    test_texts, test_labels, _, _, _, _, = load_sentiment_datasets(test_size=0.1, seed=args.seed, filepath='../data/citation_sentiment_corpus.csv')
+    test_texts, test_labels, _, _, _, _, = load_sentiment_datasets(test_size=0.1, seed=args.seed, filepath='../data/corpus.txt')
     test_dataset = SentimentDataset(tokenizer(test_texts, truncation=True, padding=True, return_tensors='pt', max_length=512),
                              test_labels)
     predictions = trainer.predict(test_dataset)
@@ -332,6 +371,8 @@ if __name__ == '__main__':
     parser.add_argument('--warmup_ratio', type=float, default=0.1, help='Warmup ratio')
     parser.add_argument('--device', type=str, default='cuda:0', help='Device')
     parser.add_argument('--seed', type=int, default=42, help='Seed')
+    parser.add_argument('--validation_type', type=str, default='regular', choices=['regular', 'kfold'], help='Validation type: regular or kfold')
+    parser.add_argument('--k_folds', type=int, default=5, help='Number of folds for k-fold cross-validation')
     args = parser.parse_args()  # 解析命令行参数
 
     seed_everything(args.seed)
