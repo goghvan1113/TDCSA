@@ -24,45 +24,43 @@ def seed_everything(seed):
     torch.backends.cudnn.benchmark = False
 
 
-def extract_aspect_pairs(text, sentiment, tokenizer, model, device):
+def extract_sentiment_triplets(text, sentiment, tokenizer, model, device):
     system_prompt = '''
-        You are an AI assistant specialized in analyzing scientific citations and extracting aspect-pairs (aspect and corresponding sentiment) from them. Your task is to identify key aspects discussed in the citation and determine the sentiment associated with each aspect. 
+        You are an AI assistant specialized in analyzing scientific citations and extracting aspect sentiment triplet from them according to the following sentiment elements definition: 
+        -An "aspect term" refers to a specific contribution, method, finding, or component of the cited work that appears explicitly as a substring in the citation text
+        -An "opinion term" refers to the evaluation or assessment expressed towards a particular aspect of the cited work, appearing explicitly as a substring in the citation text
+        -The "sentiment polarity" indicates the author's attitude towards the cited aspect, with three possible values: "positive", "negative", or "neutral" (for mild/moderate evaluations)        
+                
+        Rules:
+        1. Only extract up to 2 sentiment element triplets per citation.
+        2. Aspect terms and opinion terms must be exact matches from the text.
+        3. Sentiment polarity must be one of: "positive" or "negative".
+        4. Ignore purely objective statements without evaluative content.
 
-        Guidelines:
-        1. Extract between 1 to 3 aspect-pairs from each citation.
-        2. An aspect can be any specific element of the research being cited, such as methodology, results, implications, innovation, etc.
-        3. The sentiment for each aspect should be clearly positive or negative.
-        4. Provide your response in a structured format: Aspect: [aspect], Sentiment: [positive/negative]
-        5. Ensure that the extracted aspects are relevant and significant to the overall sentiment of the citation.
-
-        Remember, the overall sentiment of the citation is provided, but individual aspects within the citation may have different sentiments.
-
-        Example 1 (Positive):
-        Text: This groundbreaking study provides compelling evidence for the effectiveness of the new treatment, demonstrating significant improvement in patient outcomes across multiple metrics.
+        Example 1:
+        Text: Substantial improvements have been made to parse western language such as English, and many powerful models have been proposed.
         Overall Sentiment: Positive
-        Aspect-pairs:
-        Aspect: Study quality, Sentiment: Positive
-        Aspect: Treatment effectiveness, Sentiment: Positive
-        Aspect: Patient outcomes, Sentiment: Positive
+        Sentiment Triplets:
+        [("improvements", "substantial", "positive"), ("models", "powerful", "positive")]
 
-        Example 2 (Negative):
-        Text: While the paper attempts to address an important issue, its methodology is flawed and the conclusions drawn are not adequately supported by the limited data presented.
+        Example 2:
+        Text: However, one of the major limitations of these advances is the structured syntactic knowledge, which is important to global reordering, has not been well exploited.
         Overall Sentiment: Negative
-        Aspect-pairs:
-        Aspect: Research topic, Sentiment: Positive
-        Aspect: Methodology, Sentiment: Negative
-        Aspect: Data support, Sentiment: Negative
+        Sentiment Triplets:
+        [("structured syntactic knowledge", "has not been well exploited", "negative"), ("syntactic knowledge", "important", "positive")]
 
         '''
 
     user_prompt = f'''
-        Analyze the following scientific citation and extract 1 to 3 aspect-pairs (aspect and sentiment):
-
+        Analyze the sentiment elements in this scientific citation text. Provide exactly up to 2 triplets containing (aspect term, opinion term, sentiment polarity) for the following citation:
+        
         Text: {text}
         Overall Sentiment: {sentiment}
-
-        Please provide the aspect-pairs in the following format:
-        Aspect: [aspect], Sentiment: [positive/negative]
+        
+        Provide your response in the format of a Python list of tuples:
+        Sentiment elements: [("aspect term", "opinion term", "sentiment polarity"), ("aspect term", "opinion term", "sentiment polarity")]
+        
+        Only include the list of triplets in your response, with no additional text.
         '''
     messages = [
         {'role': 'system', 'content': system_prompt},
@@ -83,19 +81,20 @@ def extract_aspect_pairs(text, sentiment, tokenizer, model, device):
         temperature=0.7,
         top_p=0.95,
     )
+    generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in
+                     zip(model_input.input_ids, generated_ids)]  # remove the input text
     response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
     # print(response)
-    # 解析模型输出，提取 aspect-pairs
-    aspect_pairs = []
-    for line in response.split('\n'):
-        if line.startswith('Aspect:'):
-            parts = line.split(',')
-            if len(parts) == 2:
-                aspect = parts[0].replace('Aspect:', '').strip()
-                sentiment = parts[1].replace('Sentiment:', '').strip()
-                aspect_pairs.append({'aspect': aspect, 'sentiment': sentiment})
-
-    return aspect_pairs
+    # 解析模型输出,提取三元组
+    try:
+        # 找到包含"Sentiment elements:"的行并提取元组列表
+        triplets_str = response.split("Sentiment elements:")[-1].strip()
+        # 使用eval()将字符串转换为Python列表
+        triplets = eval(triplets_str)
+        return triplets
+    except:
+        print("Error in extracting sentiment triplets")
+        return []
 
 def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt', is_split=True):
     sentences, labels = [], []
@@ -138,43 +137,49 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt
     else:
         return sentences, labels
 
+
 def process_dataset(file_path, tokenizer, model, device):
     sentences, labels = load_sentiment_datasets(filepath=file_path, is_split=False)
     label_map = {0: 'neutral', 1: 'positive', 2: 'negative'}
     labels = [label_map[label] for label in labels]
 
     df = pd.DataFrame({'Citation_Text': sentences, 'Sentiment': labels})
-    df = df[df['Sentiment'].isin(['positive', 'negative'])]
-    # df = df.head(5) # 测试用
+    df = df[df['Sentiment'].isin(['positive', 'negative'])]  # 只处理正面和负面情感的引文
+    # df = df.head(5)  # 测试用
+
     results = []
     for _, row in tqdm(df.iterrows(), desc="Processing citations", total=len(df)):
-        aspect_pairs = extract_aspect_pairs(row['Citation_Text'], row['Sentiment'], tokenizer, model, device)
+        triplets = extract_sentiment_triplets(row['Citation_Text'], row['Sentiment'], tokenizer, model, device)
         results.append({
             'text': row['Citation_Text'],
             'overall_sentiment': row['Sentiment'],
-            'aspect_pairs': aspect_pairs
+            'sentiment_triplets': triplets
         })
     return results
+
 
 def save_results(results, output_file):
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
+
 
 def main():
     seed = 42
     seed_everything(seed)
 
     file_path = '../data/corpus.txt'
-    output_dir = '../output/sentiment_absa_results.json'
-    model_name = 'Meta-Llama-3.1-8B-Instruct'
+    output_dir = '../output/sentiment_aste_results.json'
+    model_name = 'Meta-Llama-3-8B-Instruct'
     model_dir = f'../pretrain_models/{model_name}'
     device = 'cuda:0'
+
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = AutoModelForCausalLM.from_pretrained(model_dir, torch_dtype=torch.bfloat16,
                                                  attn_implementation='flash_attention_2', device_map=device)
 
     res = process_dataset(file_path, tokenizer, model, device)
     save_results(res, output_dir)
+
 
 if __name__ == '__main__':
     main()

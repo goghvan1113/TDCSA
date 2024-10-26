@@ -6,3 +6,5 @@
 /data/SciCite/
 /data/custom_datasets/
 /test/
+/bert/wandb/
+/bert with llama/results/

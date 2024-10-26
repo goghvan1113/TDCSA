@@ -2,6 +2,8 @@ import os
 import time
 import json
 import torch
+from torch import nn
+
 import wandb
 import random
 import argparse
@@ -10,7 +12,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from sklearn.utils import shuffle
-from transformers import TrainerCallback
+from transformers import TrainerCallback, TrainerState, TrainerControl
 from sklearn.model_selection import KFold
 from huggingface_hub import notebook_login
 from sklearn.model_selection import train_test_split
@@ -28,7 +30,7 @@ def main(args):
     label2id={"Neutral":0, "Positive":1, "Negative":2}
 
     device = torch.device(args.device)
-    filepath = '../data/corpus.txt'
+    filepath = '../data/citation_sentiment_corpus_expand.csv'
     model_dir = f"../pretrain_models/{args.model_name}"
     # model_dir = f"../citation_finetuned_models/{args.model_name}_cpt"
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
@@ -89,7 +91,6 @@ def main(args):
     train_time = int(end - start)
     print(f"Training took: {train_time} seconds")
     eval_result = trainer.evaluate()
-    loss_recorder.plot_metrics()
 
     # Evaluate on the test set
     test_result = trainer.predict(test_data)
@@ -135,6 +136,15 @@ class CustomBERTModel(AutoModelForSequenceClassification):
         self.bert = AutoModel.from_pretrained(config._name_or_path)
         self.dropout = torch.nn.Dropout(0.3)
         self.classifier = torch.nn.Linear(self.bert.config.hidden_size, config.num_labels)
+        self.init_weights()
+
+    def init_weights(self):
+        """Initialize weights with a normal distribution"""
+        for module in self.modules():
+            if isinstance(module, nn.Linear):
+                module.weight.data.normal_(mean=0.0, std=0.02)
+                if module.bias is not None:
+                    module.bias.data.zero_()
 
     def forward(self, input_ids, attention_mask=None, token_type_ids=None, labels=None):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
@@ -165,61 +175,69 @@ class CustomTrainer(Trainer):
         else:
             loss_fct = torch.nn.CrossEntropyLoss()
         loss = loss_fct(logits, labels)
+
         return (loss, outputs) if return_outputs else loss
 
 
 class LossRecorderCallback(TrainerCallback):
     def __init__(self):
-        self.train_losses = []
-        self.eval_losses = []
-        self.f1_scores_macro = []
-        self.f1_scores_micro = []
-        self.accuracies = []
+        self.train_metrics = {
+            'steps': [],
+            'train_loss': []
+        }
+        self.eval_metrics = {
+            'steps': [],
+            'eval_loss': [],
+            'f1_scores_macro': [],
+            'accuracy': []
+        }
+        self.fig, (self.ax1, self.ax2) = plt.subplots(2, 1, figsize=(12, 10))
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         if 'loss' in logs:
-            self.train_losses.append(logs['loss'])
+            self.train_metrics['steps'].append(state.global_step)
+            self.train_metrics['train_loss'].append(logs['loss'])
+
         if 'eval_loss' in logs:
-            self.eval_losses.append(logs['eval_loss'])
-        if 'eval_F1_Macro' in logs:
-            self.f1_scores_macro.append(logs['eval_F1_Macro'])
-        if 'eval_F1_Micro' in logs:
-            self.f1_scores_micro.append(logs['eval_F1_Micro'])
-        if 'eval_Accuracy' in logs:
-            self.accuracies.append(logs['eval_Accuracy'])
+            self.eval_metrics['steps'].append(state.global_step)
+            self.eval_metrics['eval_loss'].append(logs['eval_loss'])
+            self.eval_metrics['f1_scores_macro'].append(logs['eval_F1_Macro'])
+            self.eval_metrics['accuracy'].append(logs['eval_Accuracy'])
 
-    def plot_metrics(self):
-        min_length = min(len(self.train_losses), len(self.eval_losses))
-        steps = range(min_length)
+    def on_train_end(self, args: TrainingArguments, state: TrainerState, control: TrainerControl, **kwargs):
+        self._plot_metrics()
 
-        plt.figure(figsize=(12, 8))
-        plt.subplot(2, 2, 1)
-        plt.plot(steps, self.train_losses[:min_length], label='Training Loss')
-        plt.plot(steps, self.eval_losses[:min_length], label='Validation Loss')
-        plt.xlabel('Steps')
-        plt.ylabel('Loss')
-        plt.grid()
-        plt.legend()
-        plt.title('Training and Validation Loss')
+    def _plot_metrics(self):
+        self.ax1.clear()
+        self.ax2.clear()
 
-        # Plot F1 Score
-        plt.subplot(2, 2, 2)
-        plt.plot(steps, self.f1_scores_macro[:min_length], label='Macro F1 Score')
-        plt.plot(steps, self.f1_scores_micro[:min_length], label='Micro F1 Score')
-        plt.xlabel('Steps')
-        plt.ylabel('F1 Score')
-        plt.grid()
-        plt.legend()
-        plt.title('F1 Score')
+        # Plot losses
+        if self.train_metrics['train_loss']:
+            self.ax1.plot(self.train_metrics['steps'], self.train_metrics['train_loss'],
+                          label='Train Loss', color='blue')
 
-        # Plot Accuracy
-        plt.subplot(2, 2, 3)
-        plt.plot(steps, self.accuracies[:min_length], label='Accuracy')
-        plt.xlabel('Steps')
-        plt.ylabel('Accuracy')
-        plt.grid()
-        plt.legend()
-        plt.title('Accuracy')
+        if self.eval_metrics['eval_loss']:
+            self.ax1.plot(self.eval_metrics['steps'], self.eval_metrics['eval_loss'],
+                          label='Val Loss', color='red')
+
+        self.ax1.set_xlabel('Steps')
+        self.ax1.set_ylabel('Loss')
+        self.ax1.set_title('Training and Validation Losses')
+        self.ax1.grid(True)
+        self.ax1.legend()
+
+        # Plot metrics
+        if self.eval_metrics['accuracy']:
+            self.ax2.plot(self.eval_metrics['steps'], self.eval_metrics['accuracy'],
+                          label='Accuracy', color='green')
+            self.ax2.plot(self.eval_metrics['steps'], self.eval_metrics['f1_scores_macro'],
+                          label='F1 Scores Macro', color='lightgreen')
+
+        self.ax2.set_xlabel('Steps')
+        self.ax2.set_ylabel('Score')
+        self.ax2.set_title('Validation Metrics')
+        self.ax2.grid(True)
+        self.ax2.legend()
 
         plt.tight_layout()
         plt.show()
@@ -229,15 +247,12 @@ def compute_metrics(pred):
     preds = pred.predictions.argmax(-1)
     acc = accuracy_score(labels, preds)
     precision_macro, recall_macro, f1_macro, _ = precision_recall_fscore_support(labels, preds, average='macro')
-    precision_micro, recall_micro, f1_micro, _ = precision_recall_fscore_support(labels, preds, average='micro')
+
     return {
         'Accuracy': acc,
         'Precision_Macro': precision_macro,
         'Recall_Macro': recall_macro,
-        'F1_Macro': f1_macro,
-        'Precision_Micro': precision_micro,
-        'Recall_Micro': recall_micro,
-        'F1_Micro': f1_micro,
+        'F1_Macro': f1_macro
     }
 
 def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt', is_split=True):
@@ -277,6 +292,12 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt
         df['Sentiment'] = df['Sentiment'].map(labelmap)
         sentences = df['Text'].tolist()
         labels = df['Sentiment'].tolist()
+    elif filepath == '../data/citation_sentiment_corpus_expand.csv':
+        df = pd.read_csv(filepath)
+        label_map = {'Neutral': 0, 'Positive': 1, 'Negative': 2}
+        df['Sentiment'] = df['Sentiment'].map(label_map)
+        sentences = df['Text'].tolist()
+        labels = df['Sentiment'].tolist()
 
     if is_split:
         train_texts, temp_texts, train_labels, temp_labels = train_test_split(sentences,
@@ -295,16 +316,19 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt
 
 
 def save_results(args, eval_result, test_result, train_time, label2id, test_labels, test_preds):
-    plot_roc_curve(test_labels, test_result.predictions)
-    plot_pr_curve(test_labels, test_result.predictions)
+    # plot_roc_curve(test_labels, test_result.predictions)
+    # plot_pr_curve(test_labels, test_result.predictions)
     plot_confusion_matrix(test_labels, test_preds, list(label2id.keys()))
 
-    accuracy = accuracy_score(test_labels, test_preds)
-    precision, recall, f1_macro, _ = precision_recall_fscore_support(test_labels, test_preds, average='macro')
-    precision_micro, recall_micro, f1_micro, _ = precision_recall_fscore_support(test_labels, test_preds, average='micro')
-    print(f"Test Accuracy: {accuracy:.4f}")
-    print(f"Test F1 Macro: {f1_macro:.4f}")
-    print(f"Test F1 Micro: {f1_micro:.4f}")
+    print("\nFinal Evaluation Results:")
+    for key, value in eval_result.items():
+        if isinstance(value, (int, float)):
+            print(f"{key}: {value:.4f}")
+
+    print("\nTest Results:")
+    for key, value in test_result.metrics.items():
+        if isinstance(value, (int, float)):
+            print(f"{key}: {value:.4f}")
 
     # Save results to JSON
     results = {

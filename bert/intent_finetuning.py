@@ -88,14 +88,13 @@ def main(args):
     train_time = int(end - start)
     print(f"Training took: {train_time} seconds")
     eval_result = trainer.evaluate()
-    loss_recorder.plot_and_save_metrics(f'../output')
 
     # Evaluate on the test set
     test_result = trainer.predict(test_data)
     test_preds = test_result.predictions.argmax(-1)
     test_labels = test_data.labels
-    plot_roc_curve(test_labels, test_result.predictions)
-    plot_pr_curve(test_labels, test_result.predictions)
+    # plot_roc_curve(test_labels, test_result.predictions)
+    # plot_pr_curve(test_labels, test_result.predictions)
     plot_confusion_matrix(test_labels, test_preds, list(label2id.keys()))
 
     results = {
@@ -195,49 +194,63 @@ class CustomTrainer(Trainer):
 
 class LossRecorderCallback(TrainerCallback):
     def __init__(self):
-        self.train_losses = []
-        self.eval_losses = []
-        self.f1_scores = []
-        self.accuracies = []
+        self.train_metrics = {
+            'steps': [],
+            'train_loss': []
+        }
+        self.eval_metrics = {
+            'steps': [],
+            'eval_loss': [],
+            'f1_scores': [],
+            'accuracy': []
+        }
+        self.fig, (self.ax1, self.ax2) = plt.subplots(2, 1, figsize=(12, 10))
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         if 'loss' in logs:
-            self.train_losses.append(logs['loss'])
+            self.train_metrics['steps'].append(state.global_step)
+            self.train_metrics['train_loss'].append(logs['loss'])
+
         if 'eval_loss' in logs:
-            self.eval_losses.append(logs['eval_loss'])
-        if 'eval_F1' in logs:
-            self.f1_scores.append(logs['eval_F1'])
-        if 'eval_Accuracy' in logs:
-            self.accuracies.append(logs['eval_Accuracy'])
+            self.eval_metrics['steps'].append(state.global_step)
+            self.eval_metrics['eval_loss'].append(logs['eval_loss'])
+            self.eval_metrics['f1_scores'].append(logs['eval_F1'])
+            self.eval_metrics['accuracy'].append(logs['eval_Accuracy'])
 
-    def plot_and_save_metrics(self, output_dir):
-        min_length = min(len(self.train_losses), len(self.eval_losses))
-        steps = range(min_length)
+    def on_train_end(self, args: TrainingArguments, state, control, **kwargs):
+        self._plot_metrics()
 
-        plt.figure(figsize=(12, 8))
-        plt.subplot(2, 2, 1)
-        plt.plot(steps, self.train_losses[:min_length], label='Training Loss')
-        plt.plot(steps, self.eval_losses[:min_length], label='Validation Loss')
-        plt.xlabel('Steps')
-        plt.ylabel('Loss')
-        plt.legend()
-        plt.title('Training and Validation Loss')
+    def _plot_metrics(self):
+        self.ax1.clear()
+        self.ax2.clear()
 
-        # Plot F1 Score
-        plt.subplot(2, 2, 2)
-        plt.plot(steps, self.f1_scores[:min_length], label='F1 Score')
-        plt.xlabel('Steps')
-        plt.ylabel('F1 Score')
-        plt.legend()
-        plt.title('F1 Score')
+        # Plot losses
+        if self.train_metrics['train_loss']:
+            self.ax1.plot(self.train_metrics['steps'], self.train_metrics['train_loss'],
+                          label='Train Loss', color='blue')
 
-        # Plot Accuracy
-        plt.subplot(2, 2, 3)
-        plt.plot(steps, self.accuracies[:min_length], label='Accuracy')
-        plt.xlabel('Steps')
-        plt.ylabel('Accuracy')
-        plt.legend()
-        plt.title('Accuracy')
+        if self.eval_metrics['eval_loss']:
+            self.ax1.plot(self.eval_metrics['steps'], self.eval_metrics['eval_loss'],
+                          label='Val Loss', color='red')
+
+        self.ax1.set_xlabel('Steps')
+        self.ax1.set_ylabel('Loss')
+        self.ax1.set_title('Training and Validation Losses')
+        self.ax1.grid(True)
+        self.ax1.legend()
+
+        # Plot metrics
+        if self.eval_metrics['accuracy']:
+            self.ax2.plot(self.eval_metrics['steps'], self.eval_metrics['accuracy'],
+                          label='Accuracy', color='green')
+            self.ax2.plot(self.eval_metrics['steps'], self.eval_metrics['f1_scores'],
+                          label='F1 Scores', color='lightgreen')
+
+        self.ax2.set_xlabel('Steps')
+        self.ax2.set_ylabel('Score')
+        self.ax2.set_title('Validation Metrics')
+        self.ax2.grid(True)
+        self.ax2.legend()
 
         plt.tight_layout()
         plt.show()
@@ -254,7 +267,6 @@ def compute_metrics(pred):
         'Recall': recall,
         'F1': f1,
     }
-
 
 def load_intent_datasets():
     label2id = {"background": 0, "method": 1, "result": 2}

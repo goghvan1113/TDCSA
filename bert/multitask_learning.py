@@ -6,7 +6,6 @@ from datetime import datetime
 from matplotlib import pyplot as plt
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
-from torch.utils.tensorboard import SummaryWriter
 from transformers import AutoConfig, PreTrainedModel, AutoModel, Trainer, PretrainedConfig, AutoTokenizer, \
     TrainingArguments, TrainerCallback
 from transformers.modeling_outputs import ModelOutput
@@ -18,6 +17,8 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+from bert.custom_loss import MultiFocalLoss
+from bert.plot_results import plot_confusion_matrix
 
 
 def main(args):
@@ -34,9 +35,9 @@ def main(args):
         num_sentiment_labels=3,
         num_intent_labels=3,
         loss_type=args.loss_type,
-        focal_alpha=0.25, # 0.8
+        focal_alpha=0.8, # 0.8
         focal_gamma=2.0, # 2.0
-        sentiment_weight=1.0,
+        sentiment_weight=5.0,
         intent_weight=1.0,
         label_smoothing=0.1,
         backbone_model=args.model_name
@@ -53,7 +54,7 @@ def main(args):
     # 4. 训练和评估
     training_args = TrainingArguments(
         seed=args.seed,
-        report_to='none',
+        report_to='wandb',
         output_dir=f'./results/{args.model_name}',
         num_train_epochs=args.epochs,
         learning_rate=args.learning_rate,
@@ -105,6 +106,12 @@ def main(args):
         if isinstance(value, (int, float)):
             print(f"{key}: {value:.4f}")
 
+    sentiment_preds = np.argmax(test_result.predictions[0], axis=1)
+    intent_preds = np.argmax(test_result.predictions[1], axis=1)
+
+    plot_confusion_matrix(test_data.sentiment_labels, sentiment_preds, list(sentiment_label2id.keys()), title='Sentiment Confusion Matrix')
+    plot_confusion_matrix(test_data.intent_labels, intent_preds, list(intent_label2id.keys()), title='Intent Confusion Matrix')
+
 
 @dataclass
 class MultitaskOutput(ModelOutput):
@@ -114,6 +121,7 @@ class MultitaskOutput(ModelOutput):
     loss: Optional[torch.FloatTensor] = None
     sentiment_logits: torch.FloatTensor = None
     intent_logits: torch.FloatTensor = None
+    task_weights: torch.FloatTensor = None
     hidden_states: Optional[tuple[torch.FloatTensor]] = None
     attentions: Optional[tuple[torch.FloatTensor]] = None
 
@@ -122,8 +130,6 @@ class MultitaskConfig(PretrainedConfig):
     """
     多任务模型配置类
     """
-    model_type = "multitask"
-
     def __init__(
             self,
             num_sentiment_labels: int = 3,
@@ -160,6 +166,18 @@ class MultitaskConfig(PretrainedConfig):
         self.backbone_model = backbone_model
 
 
+class LearnableTaskWeights(nn.Module):
+    def __init__(self, num_tasks):
+        super().__init__()
+        # 初始化可学习的任务权重参数
+        self.task_weights = nn.Parameter(torch.ones(num_tasks))
+
+    def forward(self):
+        # 使用softplus确保权重为正数
+        weights =  F.softplus(self.task_weights)
+        return weights / weights.sum()
+
+
 class MultitaskModel(PreTrainedModel):
     """
     多任务模型类
@@ -179,13 +197,13 @@ class MultitaskModel(PreTrainedModel):
             nn.Dropout(config.hidden_dropout_prob),
             nn.Linear(config.hidden_size, config.num_sentiment_labels)
         )
-
         self.intent_classifier = nn.Sequential(
             nn.Linear(config.hidden_size, config.hidden_size),
             nn.ReLU(),
             nn.Dropout(config.hidden_dropout_prob),
             nn.Linear(config.hidden_size, config.num_intent_labels)
         )
+        self.task_weights = LearnableTaskWeights(num_tasks=2)
 
         # 初始化权重
         self.init_weights()
@@ -231,10 +249,11 @@ class MultitaskModel(PreTrainedModel):
         sentiment_logits = self.sentiment_classifier(pooled_output)
         intent_logits = self.intent_classifier(pooled_output)
 
+        weights = self.task_weights()
         # 不在forward函数里面计算损失
 
         if not return_dict:
-            output = (sentiment_logits, intent_logits)
+            output = (sentiment_logits, intent_logits, weights)
             if output_hidden_states:
                 output += (outputs.hidden_states,)
             if output_attentions:
@@ -244,6 +263,7 @@ class MultitaskModel(PreTrainedModel):
         return MultitaskOutput(
             sentiment_logits=sentiment_logits,
             intent_logits=intent_logits,
+            task_weights=weights,
             hidden_states=outputs.hidden_states if output_hidden_states else None,
             attentions=outputs.attentions if output_attentions else None,
         )
@@ -268,49 +288,70 @@ class MetricsPlottingCallback(TrainerCallback):
             'sentiment_f1': [],
             'intent_f1': []
         }
-        self.fig, (self.ax1, self.ax2) = plt.subplots(2, 1, figsize=(12, 10))
+        self.weights_metrics = {
+            'steps': [],
+            'sentiment_weight': [],
+            'intent_weight': []
+        }
+        self.fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(3, 1, figsize=(12, 15))
 
     def on_log(self, args, state, control, logs=None, **kwargs):
         """Record training metrics at each step"""
-        if state.is_world_process_zero:
-            if 'loss' in logs:
-                self.train_metrics['steps'].append(state.global_step)
-                self.train_metrics['total_loss'].append(logs.get('loss'))
-                if 'sentiment_loss' in logs:
-                    self.train_metrics['sentiment_loss'].append(logs.get('sentiment_loss'))
-                if 'intent_loss' in logs:
-                    self.train_metrics['intent_loss'].append(logs.get('intent_loss'))
+        if state.is_world_process_zero: # one process will be True
+            # 训练指标记录
+            if all(key in logs for key in ['loss', 'sentiment_loss', 'intent_loss']):
+                # 确保是训练日志而不是评估日志
+                if not any(key.startswith('eval_') for key in logs.keys()):
+                    step = state.global_step
+                    # 避免重复记录同一步骤
+                    if not self.train_metrics['steps'] or step > self.train_metrics['steps'][-1]:
+                        self.train_metrics['steps'].append(step)
+                        self.train_metrics['total_loss'].append(logs['loss'])
+                        self.train_metrics['sentiment_loss'].append(logs['sentiment_loss'])
+                        self.train_metrics['intent_loss'].append(logs['intent_loss'])
 
+            # 评估指标记录
             if 'eval_loss' in logs:
-                self.eval_metrics['steps'].append(state.global_step)
-                self.eval_metrics['total_loss'].append(logs.get('eval_loss'))
-                self.eval_metrics['sentiment_loss'].append(logs.get('eval_sentiment_loss', 0))
-                self.eval_metrics['intent_loss'].append(logs.get('eval_intent_loss', 0))
-                self.eval_metrics['sentiment_accuracy'].append(logs.get('eval_sentiment_accuracy', 0))
-                self.eval_metrics['intent_accuracy'].append(logs.get('eval_intent_accuracy', 0))
-                self.eval_metrics['sentiment_f1'].append(logs.get('eval_sentiment_f1_macro', 0))
-                self.eval_metrics['intent_f1'].append(logs.get('eval_intent_f1_macro', 0))
+                step = state.global_step
+                # 避免重复记录同一步骤
+                if not self.eval_metrics['steps'] or step > self.eval_metrics['steps'][-1]:
+                    self.eval_metrics['steps'].append(step)
+                    self.eval_metrics['total_loss'].append(logs['eval_loss'])
+                    self.eval_metrics['sentiment_loss'].append(logs.get('eval_sentiment_loss', 0))
+                    self.eval_metrics['intent_loss'].append(logs.get('eval_intent_loss', 0))
+                    self.eval_metrics['sentiment_accuracy'].append(logs.get('eval_sentiment_accuracy', 0))
+                    self.eval_metrics['intent_accuracy'].append(logs.get('eval_intent_accuracy', 0))
+                    self.eval_metrics['sentiment_f1'].append(logs.get('eval_sentiment_f1_macro', 0))
+                    self.eval_metrics['intent_f1'].append(logs.get('eval_intent_f1_macro', 0))
+
+                    # 记录权重
+                    if 'eval_sentiment_weight' in logs:
+                        if not self.weights_metrics['steps'] or step > self.weights_metrics['steps'][-1]:
+                            self.weights_metrics['steps'].append(step)
+                            self.weights_metrics['sentiment_weight'].append(logs['eval_sentiment_weight'])
+                            self.weights_metrics['intent_weight'].append(logs['eval_intent_weight'])
+
 
     def on_train_end(self, args, state, control, **kwargs):
         """Plot metrics at the end of training"""
         self._plot_metrics()
-        plt.show()
 
     def _plot_metrics(self):
         """Plot training and evaluation metrics"""
         self.ax1.clear()
         self.ax2.clear()
+        self.ax3.clear()
 
         # Plot losses
         if self.train_metrics['total_loss']:
-            min_length = min(len(self.train_metrics['steps']), len(self.train_metrics['sentiment_loss']))
+            # min_length = min(len(self.train_metrics['steps']), len(self.train_metrics['sentiment_loss']))
             self.ax1.plot(self.train_metrics['steps'], self.train_metrics['total_loss'],
                           label='Train Total Loss', color='blue')
             if self.train_metrics['sentiment_loss']:
-                self.ax1.plot(self.train_metrics['steps'][:min_length], self.train_metrics['sentiment_loss'][:min_length],
+                self.ax1.plot(self.train_metrics['steps'], self.train_metrics['sentiment_loss'],
                               label='Train Sentiment Loss', color='lightblue')
             if self.train_metrics['intent_loss']:
-                self.ax1.plot(self.train_metrics['steps'][:min_length], self.train_metrics['intent_loss'][:min_length],
+                self.ax1.plot(self.train_metrics['steps'], self.train_metrics['intent_loss'],
                               label='Train Intent Loss', color='navy')
 
         if self.eval_metrics['total_loss']:
@@ -344,7 +385,23 @@ class MetricsPlottingCallback(TrainerCallback):
         self.ax2.grid(True)
         self.ax2.legend()
 
+        # 添加权重变化图
+        if self.weights_metrics['sentiment_weight']:
+            self.ax3.plot(self.weights_metrics['steps'],
+                          self.weights_metrics['sentiment_weight'],
+                          label='Sentiment Weight', color='orange')
+            self.ax3.plot(self.weights_metrics['steps'],
+                          self.weights_metrics['intent_weight'],
+                          label='Intent Weight', color='brown')
+
+        self.ax3.set_xlabel('Steps')
+        self.ax3.set_ylabel('Weight Value')
+        self.ax3.set_title('Task Weights Evolution')
+        self.ax3.grid(True)
+        self.ax3.legend()
+
         plt.tight_layout()
+        plt.show()
 
 class MultitaskTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
@@ -354,11 +411,9 @@ class MultitaskTrainer(Trainer):
 
         sentiment_logits = outputs.sentiment_logits
         intent_logits = outputs.intent_logits
+        task_weights = outputs.task_weights
 
-        def focal_loss(logits, labels):
-            ce_loss = F.cross_entropy(logits, labels, reduction='none')
-            pt = torch.exp(-ce_loss)
-            return (model.config.focal_alpha * (1 - pt) ** model.config.focal_gamma * ce_loss).mean()
+        focal_loss = MultiFocalLoss(num_class=3, alpha=model.config.focal_alpha, gamma=model.config.focal_gamma)
 
         def smoothing_loss(logits, labels, smoothing):
             confidence = 1.0 - smoothing
@@ -367,6 +422,7 @@ class MultitaskTrainer(Trainer):
             true_dist.fill_(smoothing / (num_classes - 1))
             true_dist.scatter_(1, labels.unsqueeze(1), confidence)
             return torch.mean(torch.sum(-true_dist * F.log_softmax(logits, dim=1), dim=1))
+
 
         if model.config.loss_type == "focal_loss":
             sentiment_loss = focal_loss(sentiment_logits, sentiment_labels)
@@ -380,18 +436,33 @@ class MultitaskTrainer(Trainer):
                 intent_loss = F.cross_entropy(intent_logits, intent_labels)
 
         loss = model.config.sentiment_weight * sentiment_loss + model.config.intent_weight * intent_loss
+        # loss = task_weights[0] * sentiment_loss + task_weights[1] * intent_loss
 
-        self.log({
-            "loss": loss.item(),
-            "sentiment_loss": sentiment_loss.item(),
-            "intent_loss": intent_loss.item()
-        })
+        # 决定了logs里面的步长，画出图来就是这个步长
+        # 只在指定的步数记录日志
+        if self.state.global_step % self.args.logging_steps == 0:
+            self.log({
+                "loss": loss.item(),
+                "sentiment_loss": sentiment_loss.item(),
+                "intent_loss": intent_loss.item(),
+                "sentiment_weight": task_weights[0].item(),
+                "intent_weight": task_weights[1].item()
+            })
 
         return (loss, outputs) if return_outputs else loss
 
 
 def compute_metrics(eval_pred):
-    (sentiment_logits, intent_logits), (sentiment_labels, intent_labels) = eval_pred
+    """
+       计算评估指标
+       eval_pred: 包含模型预测结果和真实标签的元组，结构为:
+       (predictions, labels) 其中
+       predictions是一个包含(sentiment_logits, intent_logits, task_weights)的元组
+       labels是一个包含(sentiment_labels, intent_labels)的元组
+    """
+    predictions, labels = eval_pred
+    sentiment_logits, intent_logits, task_weights = predictions  # 解包predictions
+    sentiment_labels, intent_labels = labels  # 解包labels
 
     # 计算预测结果
     sentiment_preds = np.argmax(sentiment_logits, axis=1)
@@ -409,6 +480,10 @@ def compute_metrics(eval_pred):
     intent_accuracy = accuracy_score(intent_labels, intent_preds)
     intent_f1 = f1_score(intent_labels, intent_preds, average='macro')
 
+    # 获取当前任务权重
+    current_sentiment_weight = float(task_weights[0])
+    current_intent_weight = float(task_weights[1])
+
     return {
         "sentiment_loss": sentiment_loss,
         "intent_loss": intent_loss,
@@ -416,7 +491,9 @@ def compute_metrics(eval_pred):
         "sentiment_f1_macro": sentiment_f1,
         "intent_accuracy": intent_accuracy,
         "intent_f1_macro": intent_f1,
-        "macro_f1": (sentiment_f1 + intent_f1) / 2
+        "macro_f1": (sentiment_f1 + intent_f1) / 2,
+        "sentiment_weight": current_sentiment_weight,
+        "intent_weight": current_intent_weight
     }
 
 @dataclass
@@ -448,9 +525,9 @@ def seed_everything(seed):
 
 
 def load_multitask_datasets(test_size=0.2, seed=42, tokenizer=None):
-    df = pd.read_csv('../output/corpus_with_intent.csv')
+    df = pd.read_csv('../output/corpus_with_intent.csv', encoding='utf-8')
     df = df[df['intent'] != 'unknown']
-    df = df[df['confidence'] >= 0.8] # 处理unknown和低置信度的样本
+    df = df[df['confidence'] > 0.6] # 处理unknown和低置信度的样本
 
     intent_label2id = {"background": 0, "method": 1, "result": 2}
     df['intent'] = df['intent'].map(intent_label2id).astype(int)
@@ -495,7 +572,7 @@ if __name__ == '__main__':
     parser.add_argument('--accumulation_steps', type=int, default=1, help='Gradient accumulation steps')
     parser.add_argument('--learning_rate', type=float, default=2e-5, help='Learning rate')
     parser.add_argument('--warmup_ratio', type=float, default=0.1, help='Warmup ratio')
-    parser.add_argument('--loss_type', type=str, default='ce_loss', help='Loss type')
+    parser.add_argument('--loss_type', type=str, default='focal_loss', help='Loss type')
     parser.add_argument('--weight_decay', type=float, default=0.01, help='Weight decay')
     parser.add_argument('--device', type=str, default='cuda:0', help='Device')
     parser.add_argument('--seed', type=int, default=42, help='Seed')
