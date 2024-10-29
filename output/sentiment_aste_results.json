@@ -39,11 +39,6 @@
         "relational similarity problems",
         "solved",
         "positive"
-      ],
-      [
-        "Web as a corpus",
-        "used",
-        "positive"
       ]
     ]
   },
@@ -82,11 +77,6 @@
         "sequence prediction models",
         "highly effective",
         "positive"
-      ],
-      [
-        "Hidden Markov Models",
-        "Conditional Random Fields",
-        "positive"
       ]
     ]
   },
@@ -116,7 +106,7 @@
         "negative"
       ],
       [
-        "data used",
+        "m",
         "some questions about",
         "negative"
       ]
@@ -8117,13 +8107,6 @@
       [
         "classifiers",
         "powerful",
-        "positive"
-      ],
-      [
-        "RBF-SVM",
-        "Random Forest",
-        "XGBoost",
-        "capable",
         "positive"
       ]
     ]
@@ -18317,12 +18300,6 @@
         "learning",
         "successfully",
         "positive"
-      ],
-      [
-        "chunking",
-        "morphological disambiguation",
-        "phrase parsing",
-        "positive"
       ]
     ]
   },
@@ -24133,14 +24110,8 @@
     "overall_sentiment": "positive",
     "sentiment_triplets": [
       [
-        "efficient techniques",
-        "many",
-        "positive"
-      ],
-      [
-        "multiword expressions",
-        "collocations",
-        "lexical units and idioms",
+        "techniques",
+        "efficient",
         "positive"
       ]
     ]

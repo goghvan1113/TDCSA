@@ -46,7 +46,12 @@ def main(args):
     tokenizer = AutoTokenizer.from_pretrained(f"../pretrain_models/{args.model_name}")
 
     # 3. 定义评估指标
-    train_data, val_data, test_data = load_multitask_datasets(test_size=test_size, seed=args.seed, tokenizer=tokenizer)
+    train_data, val_data, test_data = load_multitask_datasets(
+        test_size=test_size,
+        seed=args.seed,
+        tokenizer=tokenizer,
+        stratify_by_sentiment=True
+    )
     print(f"Train Dataset Size: {len(train_data)}")
     print(f"Test Dataset Size: {len(test_data)}")
     print(f"Val Dataset Size: {len(val_data)}")
@@ -54,7 +59,7 @@ def main(args):
     # 4. 训练和评估
     training_args = TrainingArguments(
         seed=args.seed,
-        report_to='wandb',
+        report_to='none',
         output_dir=f'./results/{args.model_name}',
         num_train_epochs=args.epochs,
         learning_rate=args.learning_rate,
@@ -190,32 +195,48 @@ class MultitaskModel(PreTrainedModel):
         # 加载backbone模型
         self.backbone = AutoModel.from_pretrained(f'../pretrain_models/{config.backbone_model}')
 
-        # 两个分类头
-        self.sentiment_classifier = nn.Sequential(
+        self.shared_layer = nn.Linear(config.hidden_size, config.hidden_size)
+
+        # 任务特定的特征提取层
+        self.sentiment_extractor = nn.Sequential(
             nn.Linear(config.hidden_size, config.hidden_size),
             nn.ReLU(),
             nn.Dropout(config.hidden_dropout_prob),
+            nn.Linear(config.hidden_size, config.hidden_size)
+        )
+        self.intent_extractor = nn.Sequential(
+            nn.Linear(config.hidden_size, config.hidden_size),
+            nn.ReLU(),
+            nn.Dropout(config.hidden_dropout_prob),
+            nn.Linear(config.hidden_size, config.hidden_size)
+        )
+        # 轻量级软参数共享层
+        self.sentiment_gate = nn.Sequential(
+            nn.Linear(config.hidden_size * 2, config.hidden_size),
+            nn.GELU(),
+            nn.Dropout(config.hidden_dropout_prob)
+        )
+        self.intent_gate = nn.Sequential(
+            nn.Linear(config.hidden_size * 2, config.hidden_size),
+            nn.GELU(),
+            nn.Dropout(config.hidden_dropout_prob)
+        )
+
+        # 分类器
+        self.sentiment_classifier = nn.Sequential(
+            nn.Linear(config.hidden_size, config.hidden_size),
+            nn.ReLU(),
+            nn.Dropout(0.1),
             nn.Linear(config.hidden_size, config.num_sentiment_labels)
         )
         self.intent_classifier = nn.Sequential(
             nn.Linear(config.hidden_size, config.hidden_size),
             nn.ReLU(),
-            nn.Dropout(config.hidden_dropout_prob),
+            nn.Dropout(0.1),
             nn.Linear(config.hidden_size, config.num_intent_labels)
         )
         self.task_weights = LearnableTaskWeights(num_tasks=2)
 
-        # 初始化权重
-        self.init_weights()
-
-    def init_weights(self):
-        """初始化分类头的权重"""
-        for module in [self.sentiment_classifier, self.intent_classifier]:
-            for layer in module:
-                if isinstance(layer, nn.Linear):
-                    layer.weight.data.normal_(mean=0.0, std=0.02)
-                    if layer.bias is not None:
-                        layer.bias.data.zero_()
 
     def forward(
             self,
@@ -224,48 +245,47 @@ class MultitaskModel(PreTrainedModel):
             token_type_ids: Optional[torch.LongTensor] = None,
             sentiment_labels: Optional[torch.LongTensor] = None,
             intent_labels: Optional[torch.LongTensor] = None,
-            output_attentions: Optional[bool] = None,
-            output_hidden_states: Optional[bool] = None,
-            return_dict: Optional[bool] = None,
             **kwargs
     ) -> Union[tuple, MultitaskOutput]:
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         # 获取backbone的输出
-        outputs = self.backbone(
+        output = self.backbone(
             input_ids=input_ids,
             attention_mask=attention_mask,
             token_type_ids=token_type_ids,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=True,
             **kwargs
         )
+        base_features = output[0][:, 0, :]  # 取CLS位置的特征
 
-        # 获取[CLS]位置的输出
-        pooled_output = outputs[0][:, 0, :]
+        shared_features = self.shared_layer(base_features)
 
-        # 通过分类头获取logits
-        sentiment_logits = self.sentiment_classifier(pooled_output)
-        intent_logits = self.intent_classifier(pooled_output)
+        # 任务特定特征
+        sentiment_features = self.sentiment_extractor(base_features)
+        intent_features = self.intent_extractor(base_features)
+
+        # 软参数共享通过门控机制
+        sentiment_gate = self.sentiment_gate(
+            torch.cat([shared_features, sentiment_features], dim=-1)
+        )
+        intent_gate = self.intent_gate(
+            torch.cat([shared_features, intent_features], dim=-1)
+        )
+
+        # 最终特征
+        final_sentiment = sentiment_gate * shared_features + (1 - sentiment_gate) * sentiment_features
+        final_intent = intent_gate * shared_features + (1 - intent_gate) * intent_features
+
+        # 分类
+        sentiment_logits = self.sentiment_classifier(final_sentiment)
+        intent_logits = self.intent_classifier(final_intent)
 
         weights = self.task_weights()
         # 不在forward函数里面计算损失
 
-        if not return_dict:
-            output = (sentiment_logits, intent_logits, weights)
-            if output_hidden_states:
-                output += (outputs.hidden_states,)
-            if output_attentions:
-                output += (outputs.attentions,)
-            return output
-
         return MultitaskOutput(
             sentiment_logits=sentiment_logits,
             intent_logits=intent_logits,
-            task_weights=weights,
-            hidden_states=outputs.hidden_states if output_hidden_states else None,
-            attentions=outputs.attentions if output_attentions else None,
+            task_weights=weights
         )
 
 class MetricsPlottingCallback(TrainerCallback):
@@ -403,6 +423,7 @@ class MetricsPlottingCallback(TrainerCallback):
         plt.tight_layout()
         plt.show()
 
+
 class MultitaskTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
         sentiment_labels = inputs["sentiment_labels"]
@@ -468,12 +489,6 @@ def compute_metrics(eval_pred):
     sentiment_preds = np.argmax(sentiment_logits, axis=1)
     intent_preds = np.argmax(intent_logits, axis=1)
 
-    # 计算损失
-    sentiment_loss = F.cross_entropy(torch.tensor(sentiment_logits),
-                                     torch.tensor(sentiment_labels)).item()
-    intent_loss = F.cross_entropy(torch.tensor(intent_logits),
-                                  torch.tensor(intent_labels)).item()
-
     # 计算准确率和F1分数
     sentiment_accuracy = accuracy_score(sentiment_labels, sentiment_preds)
     sentiment_f1 = f1_score(sentiment_labels, sentiment_preds, average='macro')
@@ -485,8 +500,6 @@ def compute_metrics(eval_pred):
     current_intent_weight = float(task_weights[1])
 
     return {
-        "sentiment_loss": sentiment_loss,
-        "intent_loss": intent_loss,
         "sentiment_accuracy": sentiment_accuracy,
         "sentiment_f1_macro": sentiment_f1,
         "intent_accuracy": intent_accuracy,
@@ -524,10 +537,10 @@ def seed_everything(seed):
     torch.backends.cudnn.benchmark = False
 
 
-def load_multitask_datasets(test_size=0.2, seed=42, tokenizer=None):
+def load_multitask_datasets(test_size=0.2, seed=42, tokenizer=None, stratify_by_sentiment=True):
     df = pd.read_csv('../output/corpus_with_intent.csv', encoding='utf-8')
     df = df[df['intent'] != 'unknown']
-    df = df[df['confidence'] > 0.6] # 处理unknown和低置信度的样本
+    df = df[df['confidence'] > 0.6] # 处理unknown和低置信度的样本，低置信度的样本会影响分类效果
 
     intent_label2id = {"background": 0, "method": 1, "result": 2}
     df['intent'] = df['intent'].map(intent_label2id).astype(int)
@@ -537,11 +550,21 @@ def load_multitask_datasets(test_size=0.2, seed=42, tokenizer=None):
     intent_labels = df['intent'].tolist()
 
     train_texts, temp_texts, train_sentiment_labels, temp_sentiment_labels, train_intent_labels, temp_intent_labels = train_test_split(
-        texts, sentiment_labels, intent_labels, test_size=test_size, stratify=sentiment_labels, random_state=seed
+        texts,
+        sentiment_labels,
+        intent_labels,
+        test_size=test_size,
+        stratify=sentiment_labels if stratify_by_sentiment else None,
+        random_state=seed
     )
 
     val_texts, test_texts, val_sentiment_labels, test_sentiment_labels, val_intent_labels, test_intent_labels = train_test_split(
-        temp_texts, temp_sentiment_labels, temp_intent_labels, test_size=0.5, stratify=temp_sentiment_labels, random_state=seed
+        temp_texts,
+        temp_sentiment_labels,
+        temp_intent_labels,
+        test_size=0.6,
+        stratify=temp_sentiment_labels if stratify_by_sentiment else None,
+        random_state=seed
     )
 
     train_data = MultiTaskDataset(
