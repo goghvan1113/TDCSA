@@ -1,4 +1,6 @@
 import argparse
+from collections import Counter
+
 import torch
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModel, AutoTokenizer, get_scheduler, AutoModelForCausalLM
@@ -94,9 +96,10 @@ def extract_sentiment_triplets(text, sentiment, tokenizer, model, device):
         return triplets
     except:
         print("Error in extracting sentiment triplets")
+        print(response)
         return []
 
-def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt', is_split=True):
+def load_sentiment_datasets(test_size=0.2, val_size=0.1, seed=42, filepath='../data/corpus.txt', is_split=True):
     sentences, labels = [], []
     if filepath == '../data/citation_sentiment_corpus.csv':
         df = pd.read_csv(filepath)
@@ -127,21 +130,64 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt
                         label = 2
                     sentences.append(sentence)
                     labels.append(label)
+    elif filepath == '../data/CSA_raw_dataset/augmented_context_full/combined.csv':
+        df = pd.read_csv(filepath)
+        labelmap = {'Neutral': 0, 'Positive': 1, 'Negative': 2}
+        df['Sentiment'] = df['Sentiment'].map(labelmap)
+        sentences = df['Text'].tolist()
+        labels = df['Sentiment'].tolist()
+    elif filepath == '../data/citation_sentiment_corpus_expand.csv':
+        df = pd.read_csv(filepath)
+        label_map = {'Neutral': 0, 'Positive': 1, 'Negative': 2}
+        df['Sentiment'] = df['Sentiment'].map(label_map)
+        sentences = df['Text'].tolist()
+        labels = df['Sentiment'].tolist()
+
     if is_split:
-        train_texts, temp_texts, train_labels, temp_labels = train_test_split(sentences,
-                                                                              labels, test_size=test_size,
-                                                                              stratify=labels, random_state=seed)
-        val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5,
-                                                                          stratify=temp_labels, random_state=seed)
+        train_val_texts, test_texts, train_val_labels, test_labels = train_test_split(
+            sentences,
+            labels,
+            test_size=test_size,
+            stratify=labels,
+            random_state=seed)
+
+        # df_aug = pd.read_csv('../data/train_data_aug3.csv')
+        # train_texts = df_aug['Citation_Text'].tolist()
+        # train_labels = df_aug['Sentiment'].tolist() # 替换增强后的整个数据集
+        # train_texts, train_labels = shuffle(train_texts, train_labels, random_state=seed) # 打乱新的训练集
+
+        val_ratio = val_size / (1 - test_size)
+        train_texts, val_texts, train_labels, val_labels = train_test_split(
+            train_val_texts,
+            train_val_labels,
+            test_size=val_ratio,
+            stratify=train_val_labels,
+            random_state=seed)
+
+        # Print label distribution
+        print("Train set label distribution:", Counter(train_labels))
+        print("Validation set label distribution:", Counter(val_labels))
+        print("Test set label distribution:", Counter(test_labels))
+
         return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
     else:
         return sentences, labels
 
 
+def load_negative_text_unrepeated(filepath='../data/20220206_CORPUS_critical_citations_DATA_PAPER.csv'):
+    df = pd.read_csv(filepath)
+    df = df[df['Source'] != 'Athar_2011']
+
+    return df['Context'].tolist()
+
+
 def process_dataset(file_path, tokenizer, model, device):
-    sentences, labels = load_sentiment_datasets(filepath=file_path, is_split=False)
-    label_map = {0: 'neutral', 1: 'positive', 2: 'negative'}
-    labels = [label_map[label] for label in labels]
+    # sentences, labels = load_sentiment_datasets(filepath=file_path, is_split=False)
+    # label_map = {0: 'neutral', 1: 'positive', 2: 'negative'}
+    # labels = [label_map[label] for label in labels]
+
+    sentences = load_negative_text_unrepeated()
+    labels = ['negative'] * len(sentences)
 
     df = pd.DataFrame({'Citation_Text': sentences, 'Sentiment': labels})
     df = df[df['Sentiment'].isin(['positive', 'negative'])]  # 只处理正面和负面情感的引文
@@ -163,12 +209,40 @@ def save_results(results, output_file):
         json.dump(results, f, ensure_ascii=False, indent=2)
 
 
+def merge_and_shuffle(file1=f'../output/sentiment_aste_results_1.json',
+                      file2=f'../output/sentiment_aste_results_corpus.json',
+                      output_file= f'../output/sentiment_aste_results_expand.json'):
+    """
+    合并两个数据集并打乱，这个函数是便于将生成的negative数据集和原始数据集合并
+    :param file1:
+    :param file2:
+    :param output_file:
+    :return:
+    """
+    def load_json(file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+
+    def save_json(data, file_path):
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+    data1 = load_json(file1)
+    data2 = load_json(file2)
+
+    combined_data = data1 + data2
+    random.shuffle(combined_data)
+
+    save_json(combined_data, output_file)
+
 def main():
     seed = 42
     seed_everything(seed)
 
+    merge_and_shuffle() # 合并两个数据集并打乱
+
     file_path = '../data/corpus.txt'
-    output_dir = '../output/sentiment_aste_results.json'
+    output_dir = '../output/sentiment_aste_results_corpus.json'
     model_name = 'Meta-Llama-3-8B-Instruct'
     model_dir = f'../pretrain_models/{model_name}'
     device = 'cuda:0'

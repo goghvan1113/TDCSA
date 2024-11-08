@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 from transformers import AutoConfig, PreTrainedModel, AutoModel, Trainer, PretrainedConfig, AutoTokenizer, \
     TrainingArguments, TrainerCallback, DataCollatorWithPadding
 
+from transformers_interpret import MultiLabelClassificationExplainer
 from torchviz import make_dot
 from torch import nn
 import torch
@@ -25,10 +26,8 @@ from bert.custom_loss import MultiFocalLoss
 from bert.plot_results import plot_confusion_matrix
 
 
-class AspectEnhancedBertConfig(PretrainedConfig):
-    """
-    多任务模型配置类
-    """
+class QuadAspectEnhancedBertConfig(PretrainedConfig):
+    """配置类 - 增加四元组相关配置"""
     def __init__(
             self,
             num_labels: int = 3,
@@ -44,18 +43,16 @@ class AspectEnhancedBertConfig(PretrainedConfig):
             backbone_model: str = "roberta-base",
             hidden_size: Optional[int] = None,
             hidden_dropout_prob: float = 0.1,
+            num_categories: int = 6,  # 添加类别数量
             **kwargs
     ):
         super().__init__(**kwargs)
 
-        # 获取backbone模型的配置
         backbone_config = AutoConfig.from_pretrained(f'../pretrain_models/{backbone_model}')
 
-        # 设置必要的配置参数
         self.hidden_size = hidden_size or backbone_config.hidden_size
         self.hidden_dropout_prob = hidden_dropout_prob
 
-        # 相关的配置
         self.num_labels = num_labels
         self.loss_type = loss_type
         self.loss_weights = loss_weights
@@ -64,41 +61,23 @@ class AspectEnhancedBertConfig(PretrainedConfig):
         self.multitask = multitask
         self.label_smoothing = label_smoothing
         self.backbone_model = backbone_model
+        self.num_categories = num_categories
 
-
-class AspectEnhancedBertModel(PreTrainedModel):
-    config_class = AspectEnhancedBertConfig
-    def __init__(self, config: AspectEnhancedBertConfig):
+class QuadAspectEnhancedBertModel(PreTrainedModel):
+    config_class = QuadAspectEnhancedBertConfig
+    def __init__(self, config: QuadAspectEnhancedBertConfig):
         super().__init__(config)
-
-        # 加载backbone模型
+        
+        # 基础编码器
         self.bert = AutoModel.from_pretrained(f'../pretrain_models/{config.backbone_model}')
-        self.triplet_bert = AutoModel.from_pretrained(f'../pretrain_models/{config.backbone_model}')
-
+        self.quad_bert = AutoModel.from_pretrained(f'../pretrain_models/{config.backbone_model}')
+        
         hidden_size = config.hidden_size
-
-        # ## 从词级别到句子级别的处理
-        # self.word_level = nn.Sequential(
-        #     nn.Linear(hidden_size, 512),
-        #     nn.ReLU(),
-        #     nn.Dropout(0.1)
-        # )
-        # # 短语级别的处理 1D卷积网络捕获局部特征
-        # self.phrase_level = nn.Sequential(
-        #     nn.Conv1d(512, 256, kernel_size=3, padding=1),
-        #     nn.ReLU(),
-        #     nn.Dropout(0.1)
-        # )
-        # # 句子级别的处理，捕捉句子内的长距离依赖GRU or LSTM
-        # self.sentence_level = nn.LSTM(
-        #     input_size=256,
-        #     hidden_size=128,
-        #     num_layers=2,
-        #     batch_first=True,
-        #     bidirectional=True
-        #     )
-
-        # Aspect-aware attention
+        
+        # 类别感知层
+        self.category_embedding = nn.Embedding(config.num_categories, hidden_size)
+        
+        # 交互注意力层
         self.cross_attention = nn.MultiheadAttention(
             embed_dim=hidden_size,
             num_heads=8,
@@ -112,6 +91,7 @@ class AspectEnhancedBertModel(PreTrainedModel):
             dropout=config.hidden_dropout_prob,
             batch_first=True
         )
+        
         # 特征转换层
         self.text_transform = nn.Sequential(
             nn.Linear(hidden_size, hidden_size),
@@ -119,91 +99,82 @@ class AspectEnhancedBertModel(PreTrainedModel):
             nn.ReLU(),
             nn.Dropout(config.hidden_dropout_prob)
         )
-        self.aspect_transform = nn.Sequential(
+        self.quad_transform = nn.Sequential(
             nn.Linear(hidden_size, hidden_size),
             nn.LayerNorm(hidden_size),
             nn.ReLU(),
             nn.Dropout(config.hidden_dropout_prob)
         )
-
+        
         # 融合层
         self.fusion = nn.Sequential(
             nn.Linear(hidden_size * 3, hidden_size * 3),
-            nn.LayerNorm(hidden_size * 3),
+            nn.LayerNorm(hidden_size * 3), 
             nn.ReLU(),
             nn.Dropout(config.hidden_dropout_prob)
         )
-        self.classifier = nn.Sequential(
-            nn.Linear(hidden_size * 3, hidden_size),
-            nn.ReLU(),
-            nn.Dropout(config.hidden_dropout_prob),
-            nn.Linear(hidden_size, config.num_labels)
-        )
-        self.sentiment_detector = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(),
-            nn.Dropout(config.hidden_dropout_prob),
-            nn.Linear(hidden_size, 2) # 检测是否有情感
-        )
-
-        self.init_weights() # 初始化权重 model_utils.py
-
-        # Weight sharing between BERT encoders (optional) 不共享得分要高一点
-        # self.triplet_bert.load_state_dict(self.bert.state_dict())
+        
+        # 分类器
+        self.classifier = nn.Linear(hidden_size * 3, config.num_labels)
+        # 情感检测器
+        self.sentiment_detector = nn.Linear(hidden_size, 2)
+        
+        self.init_weights()
 
     def forward(
             self,
             input_ids=None,
-            attention_mask=None,
-            triplet_input_ids=None,
-            triplet_attention_mask=None,
+            attention_mask=None, 
+            quad_input_ids=None,
+            quad_attention_mask=None,
+            category_ids=None,
             labels=None,
             sentiment_labels=None
     ):
-        # Main text encoding
-        outputs = self.bert(input_ids, attention_mask)
-        text_hidden = outputs.last_hidden_state # [batch_size, seq_len, hidden_size]
-        text_pooled = outputs.pooler_output  # [batch_size, hidden_size]
-
-        # Triplet text encoding
-        aspect_outputs = self.triplet_bert(triplet_input_ids, triplet_attention_mask)
-        aspect_hidden = aspect_outputs.last_hidden_state
-        aspect_pooled = aspect_outputs.pooler_output
-
-        # ## 从词级别到句子级别的处理
-        # word_features = self.word_level(text_hidden)  # [batch, seq_len, 512]
-        # phrase_features = self.phrase_level(word_features.transpose(1, 2)).transpose(1, 2)  # [batch_size, seq_len, 256]
-        # sentence_features, _ = self.sentence_level(phrase_features)  # [batch_size, seq_len, 256]
-
-        text_transformed = self.text_transform(text_hidden)  # [batch_size, seq_len, hidden_size]
-        aspect_transformed = self.aspect_transform(aspect_hidden)
-
+        # 文本编码
+        text_outputs = self.bert(input_ids, attention_mask)
+        text_hidden = text_outputs.last_hidden_state
+        text_pooled = text_outputs.pooler_output
+        
+        # 四元组编码
+        quad_outputs = self.quad_bert(quad_input_ids, quad_attention_mask)
+        quad_hidden = quad_outputs.last_hidden_state
+        quad_pooled = quad_outputs.pooler_output
+        
+        # 类别增强
+        if category_ids is not None:
+            category_embeds = self.category_embedding(category_ids)
+            quad_hidden = quad_hidden + category_embeds.unsqueeze(1)
+            
+        # 特征转换
+        text_transformed = self.text_transform(text_hidden)
+        quad_transformed = self.quad_transform(quad_hidden)
+        
         # 交互注意力
         cross_attn_output, _ = self.cross_attention(
             query=text_transformed,
-            key=aspect_transformed,
-            value=aspect_transformed,
-            key_padding_mask=~triplet_attention_mask.bool()
-        ) # [batch_size, seq_len, hidden_size]
-        # 自注意力增强
+            key=quad_transformed,
+            value=quad_transformed,
+            key_padding_mask=~quad_attention_mask.bool()
+        )
         self_attn_output, _ = self.self_attention(
             query=cross_attn_output,
             key=cross_attn_output,
             value=cross_attn_output,
             key_padding_mask=~attention_mask.bool()
-        ) # [batch_size, seq_len, hidden_size]
-        attn_pooled = torch.mean(self_attn_output, dim=1) # [batch_size, hidden_size]
+        )
+        attn_pooled = torch.mean(self_attn_output, dim=1)
 
-        # Feature fusion
-        combined = torch.cat([text_pooled, aspect_pooled, attn_pooled], dim=-1) # [batch_size, hidden_size * 3]
-        fused = self.fusion(combined) # [batch_size, hidden_size * 3]
-
-        # Classification
-        sentiment_logits = self.sentiment_detector(text_pooled) # [batch_size, 2]
-        sentiment_probs = torch.softmax(sentiment_logits, dim=-1)
-
-        logits = self.classifier(fused) # [batch_size, num_labels]
+        # 特征融合
+        combined = torch.cat([text_pooled, quad_pooled, attn_pooled], dim=-1)
+        fused = self.fusion(combined)
+        
+        # 分类预测
+        logits = self.classifier(fused)
         logits_probs = torch.softmax(logits, dim=-1)
+        # 使用概率加权
+        sentiment_logits = self.sentiment_detector(text_pooled)
+        sentiment_probs = torch.softmax(sentiment_logits, dim=-1)
 
         # 修改后的逻辑：使用概率加权
         neutral_weight = sentiment_probs[:, 0].unsqueeze(-1)  # 客观的概率
@@ -214,12 +185,11 @@ class AspectEnhancedBertModel(PreTrainedModel):
 
         # 转换回logits形式
         refined_logits = torch.log(refined_logits + 1e-10)
-
+        
         return {
-            'logits': refined_logits if self.config.multitask else logits,
+            'logits': refined_logits if self.config.multitask else logits, # 这个指标才是影响混淆矩阵最左边一列的数据
             'sentiment_logits': sentiment_logits
         }
-
 
 class AspectAwareTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
@@ -239,7 +209,8 @@ class AspectAwareTrainer(Trainer):
             loss_2class = focal_loss_2labels(sentiment_logits, sentiment_labels)
         else:
             loss_3class = F.cross_entropy(logits, labels, label_smoothing=model.config.label_smoothing)
-            loss_2class = F.cross_entropy(sentiment_logits, sentiment_labels, label_smoothing=model.config.label_smoothing)
+            loss_2class = F.cross_entropy(sentiment_logits, sentiment_labels,
+                                          label_smoothing=model.config.label_smoothing)
 
         loss += model.config.loss_weights["citation_sentiment"] * loss_3class
         if model.config.multitask:
@@ -265,23 +236,29 @@ def compute_metrics(pred):
         'Accuracy_2class': acc_2class
     }
 
-# default_collator = default_data_collator if tokenizer is None else DataCollatorWithPadding(tokenizer)
-class AspectDataProcessor:
-    """
-    数据预处理器，在准备数据集时处理ASTE数据
-    """
+class QuadAspectDataProcessor:
+    """数据预处理器 - 处理四元组数据"""
     def __init__(self, tokenizer: Any, max_length: int = 512):
         self.tokenizer = tokenizer
         self.max_length = max_length
+        self.category2id = {  # 预定义类别映射
+            'METHODOLOGY': 0,
+            'PERFORMANCE': 1,
+            'INNOVATION': 2,
+            'APPLICABILITY': 3,
+            'LIMITATION': 4,
+            'COMPARISON': 5
+        }
+
+    def build_category_vocab(self, features):
+        """使用预定义的类别词表"""
+        return len(self.category2id)
 
     def process_features(self, features: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        分别整个处理主文本和triplets，返回处理后的特征
-        """
-        # 处理主文本
-        texts = [f.get('text', '') for f in features]  # 使用get方法安全获取
-        labels = [f.get('label', 0) for f in features]  # 使用get方法安全获取
-        sentiment_labels = [1 if label > 0 else 0 for label in labels]  # 有情感(积极/消极)为1, 无情感(中性)为0
+        """处理四元组特征"""
+        texts = [f.get('text', '') for f in features]
+        labels = [f.get('label', 0) for f in features]  # 使用get方法安全获取标签
+        sentiment_labels = [1 if label > 0 else 0 for label in labels]
 
         text_encoding = self.tokenizer(
             texts,
@@ -291,49 +268,85 @@ class AspectDataProcessor:
             return_tensors='pt'
         )
 
-        # Process triplets 在这里面加入"类别“的文本影响分类效果
-        triplet_texts = []
+        # 处理四元组
+        quad_texts = []
+        category_ids = []
         for feature in features:
             if feature.get('label', 0) == 0:  # Neutral
-                triplet_text = "[NEUTRAL]"
                 # 使用[MASK]符号和随机噪声填充中性样本的三元组
-                num_masks = random.randint(1, 3)  # 随机选择[MASK]数量
-                triplet_text = " ".join(["[MASK]"] * num_masks)
-                # 添加少量随机噪声
                 noise_tokens = [
-                    "neutral", "sample", "info", "example", "text", "generic", "data", "reference", "placeholder",
-                    "context", "statement", "source", "comment", "topic", "subject", "entry", "note", "point",
-                    "sentence", "item", "mention", "instance", "case", "illustration", "abstract", "token",
-                    "term", "phrase", "description", "note", "segment", "section", "passage", "piece", "part",
-                    "word", "snippet", "fragment", "content", "neutral_text", "general", "entity", "element"
+                    "neutral", "sample", "info", "example", "text", "generic", "data", "reference", "analysis",
+                    "method", "approach", "context", "details", "review", "background", "overview", "basis",
+                    "supporting", "summary", "aspect", "topic", "result", "content", "framework", "definition",
+                    "perspective", "framework", "parameter", "hypothesis", "purpose", "context", "concept",
+                    "finding", "discussion", "focus", "case", "observation", "outline", "description",
+                    "literature", "citation", "source", "statement", "concept", "objective", "insight",
+                    "overview", "scope", "narrative", "data", "sampling", "parameters", "model", "application",
+                    "approach", "contribution", "aspect", "point", "highlight", "field", "angle", "review",
+                    "data", "collection", "survey", "discussion", "observation", "analysis", "phenomenon",
+                    "evidence", "evaluation", "factor", "basis", "insight", "record", "statistical", "note",
+                    "term", "application", "practice", "theme", "range", "pattern", "structure", "strategy",
+                    "background", "core", "survey", "source", "option", "component", "variable", "output",
+                    "input", "equation", "notation", "framework", "methodology", "reference", "technique",
+                    "context", "standard", "goal", "element", "operation", "material", "topic", "theory",
+                    "format", "hypothesis", "data", "overview", "section", "outline", "support", "summary",
+                    "literature", "definition", "metric", "aspect", "version", "pathway", "background",
+                    "factor", "function", "assessment", "process", "insight", "highlight", "trend",
+                    "hypothesis", "design", "view", "procedure", "summary", "representation", "property",
+                    "construct", "aspect", "formula", "description", "subsection", "principle", "element",
+                    "protocol", "phase", "inference", "statement", "illustration", "application", "framework",
+                    "notation", "dataset", "theory", "phenomenon", "measure", "instance", "idea",
+                    "proposition", "foundation", "structure", "analysis", "foundation", "term", "description",
+                    "idea", "conception", "feature", "element", "hypothesis", "evaluation", "syntax",
+                    "concept", "notion", "comparison", "scheme", "basis", "modeling", "pattern", "aspect",
+                    "object", "theory", "property", "domain", "notation", "factor", "rationale", "viewpoint"
                 ]
-                random.shuffle(noise_tokens)
-                triplet_text += " " + " ".join(noise_tokens[:random.randint(1, len(noise_tokens))]) # 长度不一定为3
-            else:
-                triplets = feature.get('triplets', [])
-                triplet_parts = []
-                for aspect, sentiment_word, polarity in triplets:
-                    pol_text = "positive" if polarity == "positive" else "negative"
-                    # triplet_parts.append(f"{aspect} is {sentiment_word} ")
-                    triplet_parts.append(f"{aspect} is {sentiment_word} [{pol_text}]")
-                triplet_text = " ; ".join(triplet_parts)
-            triplet_texts.append(triplet_text)
+                num_neutral_tags = random.randint(1, 2)  # 随机选择1到2个中性标记
+                num_words = random.randint(2, 5)  # 随机选择2到5个中性词
 
-        # Encode triplet texts
-        triplet_encoding = self.tokenizer(
-            triplet_texts,
+                neutral_tags = ["[NEUTRAL]"] * num_neutral_tags
+                random_words = random.sample(noise_tokens, num_words)
+
+                combined_list = neutral_tags + random_words
+                random.shuffle(combined_list)
+                if len(combined_list) < 5: # 截取或者填充
+                    combined_list += ["[NEUTRAL]"] * (5 - len(combined_list))
+                quad_text = " ".join(combined_list[:5])
+                category_id = 0
+            else:
+                quads = feature.get('quads', [])
+                quad_parts = []
+                feature_categories = []
+                for aspect, opinion, category, polarity in quads:
+                    # quad_parts.append(f"This citation expresses {polarity} sentiment towards {aspect} through {opinion} which belongs to {category} category")
+                    quad_parts.append(f"{aspect} is {opinion} [{polarity}] in {category}")
+                    feature_categories.append(category)
+                quad_text = " ; ".join(quad_parts)
+                # 使用最常见的类别作为该样本的主类别
+                if feature_categories:
+                    most_common_category = max(set(feature_categories),
+                                            key=feature_categories.count)
+                    category_id = self.category2id.get(most_common_category, 0)
+                else:
+                    category_id = 0
+            
+            quad_texts.append(quad_text)
+            category_ids.append(category_id)
+
+        quad_encoding = self.tokenizer(
+            quad_texts,
             padding=True,
             truncation=True,
             max_length=self.max_length,
             return_tensors="pt"
         )
 
-        # 返回处理后的特征
         return {
             "input_ids": text_encoding["input_ids"],
             "attention_mask": text_encoding["attention_mask"],
-            "triplet_input_ids": triplet_encoding["input_ids"],
-            "triplet_attention_mask": triplet_encoding["attention_mask"],
+            "quad_input_ids": quad_encoding["input_ids"],
+            "quad_attention_mask": quad_encoding["attention_mask"],
+            "category_ids": torch.tensor(category_ids),
             "labels": torch.tensor(labels),
             "sentiment_labels": torch.tensor(sentiment_labels)
         }
@@ -362,7 +375,7 @@ class AspectAwareDataset(torch.utils.data.Dataset):
             self.samples.append({
                 'text': item['text'],
                 'label': label,
-                'triplets': item['triplets']
+                'quads': item['quads']
             })
 
         # Process neutral samples
@@ -370,7 +383,7 @@ class AspectAwareDataset(torch.utils.data.Dataset):
             self.samples.append({
                 'text': text,
                 'label': 0,
-                'triplets': []
+                'quads': []
             })
         # Shuffle the samples
         random.shuffle(self.samples)
@@ -422,12 +435,6 @@ class DatasetSplitter:
         self.test_size = test_size
         self.val_size = val_size
         self.random_state = random_state
-
-    def get_sentiment_distribution(self, samples):
-        """获取情感标签分布"""
-        if isinstance(samples[0], dict):
-            return Counter(s['overall_sentiment'] for s in samples)
-        return Counter(['neutral'] * len(samples))
 
     def split_data(self, stratify_by_sentiment: bool = True):
         """
@@ -486,8 +493,7 @@ class DatasetSplitter:
             }
         }
 
-
-def create_datasets(split_data: Dict, tokenizer, with_aste: bool = True) -> Tuple[
+def create_datasets(split_data: Dict, tokenizer, with_asqp: bool = True) -> Tuple[
     AspectAwareDataset, AspectAwareDataset, AspectAwareDataset]:
     """
     创建训练集、验证集和测试集的Dataset对象
@@ -500,7 +506,7 @@ def create_datasets(split_data: Dict, tokenizer, with_aste: bool = True) -> Tupl
     # 训练集始终使用ASTE
 
     # 验证数据结构
-    processor = AspectDataProcessor(tokenizer)
+    processor = QuadAspectDataProcessor(tokenizer)
 
     for split_name, split in split_data.items():
         for sample in split['pos_neg_samples']:
@@ -514,16 +520,16 @@ def create_datasets(split_data: Dict, tokenizer, with_aste: bool = True) -> Tupl
         processor=processor
     )
 
-    # 验证集和测试集可以选择是否使用ASTE
-    if not with_aste:
+    # 验证集和测试集可以选择是否使用ASQP
+    if not with_asqp:
         # 转换为纯文本格式
         val_pos_neg = [{'text': s['text'],
                         'overall_sentiment': s['overall_sentiment'],
-                        'triplets': []}  # 空triplets
+                        'quads': []}  # 空triplets
                        for s in split_data['val']['pos_neg_samples']]
         test_pos_neg = [{'text': s['text'],
                          'overall_sentiment': s['overall_sentiment'],
-                         'triplets': []}  # 空triplets
+                         'quads': []}  # 空triplets
                         for s in split_data['test']['pos_neg_samples']]
     else:
         val_pos_neg = split_data['val']['pos_neg_samples']
@@ -545,54 +551,48 @@ def create_datasets(split_data: Dict, tokenizer, with_aste: bool = True) -> Tupl
 
     return train_dataset, val_dataset, test_dataset
 
-def load_aste_data(tripelet_file=None, corpus_file=None):
-    # 加载正负样本和对应的三元组
+
+def load_asqp_data(quad_file=None, corpus_file=None):
+    """加载四元组数据"""
     pos_neg_samples = []
-    with open(tripelet_file, 'r', encoding='utf-8') as f:
+    with open(quad_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     for item in data:
         if item['overall_sentiment'] in ['positive', 'negative']:
-            # 添加检查
-            if 'text' not in item:
-                print(f"Warning: Missing 'text' in item: {item}")
-                continue
-
-            # Check for sentiment_triplets with more than 3 elements
-            for triplet in item['sentiment_triplets']:
-                if len(triplet) > 3:
-                    print(f"Item with triplet having more than 3 elements: {item}") # 找到超过3个元素的triplet
-                if len(triplet) < 1:
-                    print(f"Item with triplet having less than 1 elements: {item}") # 找到空的triplet
-
             pos_neg_samples.append({
                 'text': item['text'],
                 'overall_sentiment': item['overall_sentiment'],
-                'triplets': item['sentiment_triplets']
+                'quads': item['sentiment_quadruples']  # 修改为sentiment_quadruples
             })
 
     # 加载中性样本
     neutral_samples = []
-    if corpus_file == '../data/citation_sentiment_corpus_expand.csv':
-        df = pd.read_csv(corpus_file)
-        neutral_samples = df[df['Sentiment'] == 'Neutral']['Text'].tolist()
-    elif corpus_file == '../data/corpus.txt':
-        with open('../data/corpus.txt', "r", encoding="utf8") as f:
-            file = f.read().split("\n")
-            file = [i.split("\t") for i in file]
-            for i in file:
-                if len(i) == 2:
-                    sentence = i[1]
-                    label = int(i[0])
-                    # Map labels: 2 -> Positive, 1 -> Neutral, 0 -> Negative
-                    if label == 1:
-                        neutral_samples.append(sentence)
-    elif corpus_file == '../data/citation_sentiment_corpus.csv': # 读取raw的Athar数据集
-        df = pd.read_csv(corpus_file)
-        neutral_samples = df[df['Sentiment'] == 'o']['Citation_Text'].tolist()
+    df = pd.read_csv(corpus_file)
+    neutral_samples = df[df['Sentiment'] == 'Neutral']['Text'].tolist()
 
     return pos_neg_samples, neutral_samples
 
+def load_asqp_data_verified(quad_file=None, corpus_file=None):
+    """加载四元组数据"""
+    pos_neg_samples = []
+    with open(quad_file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    for item in data:
+        if item['overall_sentiment'] in ['positive', 'negative']:
+            pos_neg_samples.append({
+                'text': item['text'],
+                'overall_sentiment': item['overall_sentiment'],
+                'quads': item['final_quadruples']  # 修改为sentiment_quadruples
+            })
+
+    # 加载中性样本
+    neutral_samples = []
+    df = pd.read_csv(corpus_file)
+    neutral_samples = df[df['Sentiment'] == 'Neutral']['Text'].tolist()
+
+    return pos_neg_samples, neutral_samples
 
 class ModelEvaluator:
     def __init__(self, model, tokenizer, device='cuda'):
@@ -640,6 +640,7 @@ class ModelEvaluator:
             'predictions': all_preds,
             'labels': all_labels,
         }
+
 
 class LossRecorderCallback(TrainerCallback):
     def __init__(self):
@@ -712,20 +713,25 @@ class LossRecorderCallback(TrainerCallback):
         plt.tight_layout()
         plt.show()
 
-def train_aste_model(args, train_data, eval_data):
+
+def train_asqp_model(args, train_data, eval_data):
     device = args.device
-    config = AspectEnhancedBertConfig(
+    config = QuadAspectEnhancedBertConfig(
         num_labels=3,
         loss_type=args.loss_type,
-        loss_weights={'citation_sentiment': 1.0, 'subject_sentiment': 0.5},
-        focal_alpha=0.8,  # 0.8
-        focal_gamma=2.0,  # 2.0
+        loss_weights={'citation_sentiment': 1.0, 'subject_sentiment': 1.0},
+        focal_alpha=0.8,
+        focal_gamma=2.0,
         label_smoothing=0.1,
-        multitask=False,
+        multitask=True,
         backbone_model=args.model_name,
+        num_categories=6 # 类别数量
     )
-    model = AspectEnhancedBertModel(config).to(device)
+
+    model = QuadAspectEnhancedBertModel(config).to(device)
+    # model.save_pretrained(f'../citation_finetuned_models/saved_model')
     tokenizer = AutoTokenizer.from_pretrained(f"../pretrain_models/{args.model_name}")
+    # tokenizer.save_pretrained(f'../citation_finetuned_models/saved_model')
     # print(model)
 
     training_args = TrainingArguments(
@@ -745,7 +751,8 @@ def train_aste_model(args, train_data, eval_data):
         logging_steps=50,
         eval_strategy="steps",
         eval_steps=50,
-        bf16=True,
+        bf16=True, # bf16精度较低但是数值范围更大
+        # fp16=True, # 大幅度加快训练速度
         metric_for_best_model='F1_Macro',
         save_total_limit=2,
         load_best_model_at_end=True,
@@ -775,19 +782,23 @@ def seed_everything(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False  # 启用Cudnn
 
+
 def main(args):
     # 加载数据
-    triplet_file = f'../output/sentiment_aste_results_corpus_expand.json'
+    quad_file = f'../output/sentiment_asqp_results_corpus_expand.json'
+    quad_file_verified = f'../output/sentiment_asqp_results_corpus_expand_verified_gpt4o.json'
     corpus_file = '../data/citation_sentiment_corpus_expand.csv'
-    pos_neg_samples, neutral_samples = load_aste_data(triplet_file, corpus_file)
+    # pos_neg_samples, neutral_samples = load_asqp_data_verified(quad_file_verified, corpus_file)
+    pos_neg_samples, neutral_samples = load_asqp_data(quad_file, corpus_file)
 
     splitter = DatasetSplitter(
         pos_neg_samples=pos_neg_samples,
         neutral_samples=neutral_samples,
         test_size=0.2,
         val_size=0.1,
-        random_state = args.seed
+        random_state=args.seed
     )
+
     split_data = splitter.split_data(stratify_by_sentiment=True)
     # 打印数据集统计信息
     for split_name, split in split_data.items():
@@ -797,14 +808,15 @@ def main(args):
         print(f"Negative: {pos_neg_dist['negative']}")
         print(f"Neutral: {len(split['neutral_samples'])}")
 
+    # 初始化处理器和分词器
     tokenizer = AutoTokenizer.from_pretrained(f"../pretrain_models/{args.model_name}")
     train_dataset, val_dataset, test_dataset = create_datasets(
         split_data,
         tokenizer,
-        with_aste=True  # 在这进行tokenize
+        with_asqp=True  # 在这进行tokenize
     )
 
-    model = train_aste_model(args, train_dataset, val_dataset)
+    model = train_asqp_model(args, train_dataset, val_dataset)
 
     # 评估模型
     evaluator = ModelEvaluator(model, tokenizer)
@@ -818,36 +830,10 @@ def main(args):
     print(test_results['classification_report'])
 
 
-def plot_model(model, tokenizer):
-    inputs_ids = tokenizer("This is a sample input", return_tensors="pt")['input_ids']
-    attention_mask = tokenizer("This is a sample input", return_tensors="pt")['attention_mask']
-    triplet_input_ids = tokenizer("This is a sample input", return_tensors="pt")['input_ids']
-    triplet_attention_mask = tokenizer("This is a sample input", return_tensors="pt")['attention_mask']
-    inputs = {
-        "input_ids": inputs_ids,
-        "attention_mask": attention_mask,
-        "triplet_input_ids": triplet_input_ids,
-        "triplet_attention_mask": triplet_attention_mask,
-        "labels": torch.tensor([1]),
-        "sentiment_labels": torch.tensor([1])
-    }
-    outputs = model(**inputs)
-    # make_dot(outputs['logits'], params=dict(model.named_parameters())).render("model", format="png")
-
-    from torch.utils.tensorboard import SummaryWriter
-    writer = SummaryWriter(log_dir="./tensorboard_logs")
-
-    # Log the model's structure to TensorBoard
-    writer.add_graph(model, [inputs_ids, attention_mask, triplet_input_ids, triplet_attention_mask])
-
-    # Close the writer
-    writer.close()
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--model_name", type=str, default="roberta-llama3.1405B-twitter-sentiment")
+    parser.add_argument("--model_name", type=str, default="scibert_scivocab_uncased")
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--learning_rate", type=float, default=2e-5)
     parser.add_argument("--batch_size", type=int, default=32)
@@ -857,8 +843,6 @@ if __name__ == "__main__":
     parser.add_argument("--loss_type", type=str, default="ce_loss")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args()
+
     seed_everything(args.seed)
-
-    # plot_model(AspectEnhancedBertModel(AspectEnhancedBertConfig(backbone_model=args.model_name)), AutoTokenizer.from_pretrained(f"../pretrain_models/{args.model_name}"))
-
     main(args)

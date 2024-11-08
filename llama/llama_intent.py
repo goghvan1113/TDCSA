@@ -1,4 +1,6 @@
 import argparse
+from collections import Counter
+
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from tqdm import tqdm
@@ -89,7 +91,7 @@ def classify_intent(text, tokenizer, model, device):
     return intent, confidence
 
 
-def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt', is_split=True):
+def load_sentiment_datasets(test_size=0.2, val_size=0.1, seed=42, filepath='../data/corpus.txt', is_split=True):
     sentences, labels = [], []
     if filepath == '../data/citation_sentiment_corpus.csv':
         df = pd.read_csv(filepath)
@@ -120,12 +122,45 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt
                         label = 2
                     sentences.append(sentence)
                     labels.append(label)
+    elif filepath == '../data/CSA_raw_dataset/augmented_context_full/combined.csv':
+        df = pd.read_csv(filepath)
+        labelmap = {'Neutral': 0, 'Positive': 1, 'Negative': 2}
+        df['Sentiment'] = df['Sentiment'].map(labelmap)
+        sentences = df['Text'].tolist()
+        labels = df['Sentiment'].tolist()
+    elif filepath == '../data/citation_sentiment_corpus_expand.csv':
+        df = pd.read_csv(filepath)
+        label_map = {'Neutral': 0, 'Positive': 1, 'Negative': 2}
+        df['Sentiment'] = df['Sentiment'].map(label_map)
+        sentences = df['Text'].tolist()
+        labels = df['Sentiment'].tolist()
+
     if is_split:
-        train_texts, temp_texts, train_labels, temp_labels = train_test_split(sentences,
-                                                                              labels, test_size=test_size,
-                                                                              stratify=labels, random_state=seed)
-        val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5,
-                                                                          stratify=temp_labels, random_state=seed)
+        train_val_texts, test_texts, train_val_labels, test_labels = train_test_split(
+            sentences,
+            labels,
+            test_size=test_size,
+            stratify=labels,
+            random_state=seed)
+
+        # df_aug = pd.read_csv('../data/train_data_aug3.csv')
+        # train_texts = df_aug['Citation_Text'].tolist()
+        # train_labels = df_aug['Sentiment'].tolist() # 替换增强后的整个数据集
+        # train_texts, train_labels = shuffle(train_texts, train_labels, random_state=seed) # 打乱新的训练集
+
+        val_ratio = val_size / (1 - test_size)
+        train_texts, val_texts, train_labels, val_labels = train_test_split(
+            train_val_texts,
+            train_val_labels,
+            test_size=val_ratio,
+            stratify=train_val_labels,
+            random_state=seed)
+
+        # Print label distribution
+        print("Train set label distribution:", Counter(train_labels))
+        print("Validation set label distribution:", Counter(val_labels))
+        print("Test set label distribution:", Counter(test_labels))
+
         return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
     else:
         return sentences, labels

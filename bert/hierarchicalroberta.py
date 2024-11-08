@@ -1,6 +1,8 @@
 import os
 import time
 import json
+from collections import Counter
+
 import torch
 from torch import nn
 
@@ -16,7 +18,7 @@ from transformers import TrainerCallback, TrainerState, TrainerControl
 from sklearn.model_selection import KFold
 from huggingface_hub import notebook_login
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, classification_report
 from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification, Trainer, TrainingArguments
 
 from bert.custom_loss import MultiFocalLoss, MultiDSCLoss, AsymmetricLoss
@@ -24,21 +26,23 @@ from bert.plot_results import plot_roc_curve, plot_pr_curve, plot_confusion_matr
 
 
 def main(args):
-    num_labels = 3
-    test_size = 0.4
     id2label = {0: "Neutral", 1: "Positive", 2: "Negative"}
     label2id = {"Neutral": 0, "Positive": 1, "Negative": 2}
 
     device = torch.device(args.device)
-    filepath = '../data/citation_sentiment_corpus_expand.csv'
+    filepath = '../data/citation_sentiment_corpus_expand_athar.csv'
     model_dir = f"../pretrain_models/{args.model_name}"
     # model_dir = f"../citation_finetuned_models/{args.model_name}_cpt"
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    model = CustomBERTModel.from_pretrained(model_dir, num_labels=num_labels, id2label=id2label, label2id=label2id).to(
+    model = CustomBERTModel.from_pretrained(model_dir, num_labels=3, id2label=id2label, label2id=label2id).to(
         device)
 
     train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = load_sentiment_datasets(
-        test_size=test_size, seed=args.seed, filepath=filepath)
+        test_size=0.2,
+        val_size=0.1,
+        seed=args.seed,
+        filepath=filepath
+    )
     train_data = SentimentDataset(
         tokenizer(train_texts, truncation=True, padding=True, return_tensors='pt', max_length=512), train_labels)
     val_data = SentimentDataset(
@@ -46,11 +50,6 @@ def main(args):
     test_data = SentimentDataset(
         tokenizer(test_texts, truncation=True, padding=True, return_tensors='pt', max_length=512), test_labels)
 
-    print(f"Train Dataset Size: {len(train_data)}")
-    print(f"Test Dataset Size: {len(test_data)}")
-    print(f"Val Dataset Size: {len(val_data)}")
-
-    loss_recorder = LossRecorderCallback()
     # 定义训练参数
     training_args = TrainingArguments(
         seed=args.seed,
@@ -87,7 +86,7 @@ def main(args):
         tokenizer=tokenizer,
         compute_metrics=compute_metrics,
         loss_type=args.loss_type,  # 自定义参数 focal_loss dsc_loss
-        callbacks=[loss_recorder]
+        callbacks=[LossRecorderCallback()]
     )
 
     start = time.time()
@@ -95,16 +94,8 @@ def main(args):
     end = time.time()
     train_time = int(end - start)
     print(f"Training took: {train_time} seconds")
-    eval_result = trainer.evaluate()
 
-    # Evaluate on the test set
-    test_result = trainer.predict(test_data)
-    test_preds = test_result.predictions.argmax(-1)
-    test_labels = test_data.labels
-
-    # Save results and plot metrics
-    save_results(args, eval_result, test_result, train_time, label2id, test_labels, test_preds)
-    # mytest(args, trainer, tokenizer)
+    save_and_plot(trainer, val_data, test_data, label2id)
 
 
 def seed_everything(seed):
@@ -311,7 +302,7 @@ def compute_metrics(pred):
     }
 
 
-def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt', is_split=True):
+def load_sentiment_datasets(test_size=0.2, val_size=0.1, seed=42, filepath='../data/corpus.txt', is_split=True):
     sentences, labels = [], []
     if filepath == '../data/citation_sentiment_corpus.csv':
         df = pd.read_csv(filepath)
@@ -322,7 +313,7 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt
     elif filepath == '../data/citation_sentiment_corpus_balanced.csv':
         df = pd.read_csv(filepath)
         df = df[(df['Source'] == 'new') & (df['Sentiment'].isin([1, 2])) | (df['Source'] == 'original') & (
-                df['Sentiment'] == 0)]  # 只选取新数据集中的正负样本和原始数据集中的中性样本
+                    df['Sentiment'] == 0)] # 只选取新数据集中的正负样本和原始数据集中的中性样本
         sentences = df['Citation_Text'].tolist()
         labels = df['Sentiment'].tolist()
     elif filepath == '../data/corpus.txt':
@@ -348,7 +339,7 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt
         df['Sentiment'] = df['Sentiment'].map(labelmap)
         sentences = df['Text'].tolist()
         labels = df['Sentiment'].tolist()
-    elif filepath == '../data/citation_sentiment_corpus_expand.csv':
+    elif filepath == '../data/citation_sentiment_corpus_expand_athar.csv':
         df = pd.read_csv(filepath)
         label_map = {'Neutral': 0, 'Positive': 1, 'Negative': 2}
         df['Sentiment'] = df['Sentiment'].map(label_map)
@@ -356,89 +347,79 @@ def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt
         labels = df['Sentiment'].tolist()
 
     if is_split:
-        train_texts, temp_texts, train_labels, temp_labels = train_test_split(sentences,
-                                                                              labels, test_size=test_size,
-                                                                              stratify=labels, random_state=seed)
+        train_val_texts, test_texts, train_val_labels, test_labels = train_test_split(
+            sentences,
+            labels,
+            test_size=test_size,
+            stratify=labels,
+            random_state=seed)
+
         # df_aug = pd.read_csv('../data/train_data_aug3.csv')
         # train_texts = df_aug['Citation_Text'].tolist()
         # train_labels = df_aug['Sentiment'].tolist() # 替换增强后的整个数据集
         # train_texts, train_labels = shuffle(train_texts, train_labels, random_state=seed) # 打乱新的训练集
 
-        val_texts, test_texts, val_labels, test_labels = train_test_split(temp_texts, temp_labels, test_size=0.5,
-                                                                          stratify=temp_labels, random_state=seed)
+        val_ratio = val_size / (1 - test_size)
+        train_texts, val_texts, train_labels, val_labels = train_test_split(
+            train_val_texts,
+            train_val_labels,
+            test_size=val_ratio,
+            stratify=train_val_labels,
+            random_state=seed)
+
+        # Print label distribution
+        print("Train set label distribution:", Counter(train_labels))
+        print("Validation set label distribution:", Counter(val_labels))
+        print("Test set label distribution:", Counter(test_labels))
+
         return train_texts, train_labels, val_texts, val_labels, test_texts, test_labels
     else:
         return sentences, labels
 
+def save_and_plot(trainer, val_dataset, test_dataset, label2id, output_path='../output/bert_training_details.json'):
+    # Evaluate on the validation set
+    val_result = trainer.predict(val_dataset)
+    val_preds = val_result.predictions.argmax(-1)
+    val_labels = val_dataset.labels
 
-def save_results(args, eval_result, test_result, train_time, label2id, test_labels, test_preds):
+    # Evaluate on the test set
+    test_result = trainer.predict(test_dataset)
+    test_preds = test_result.predictions.argmax(-1)
+    test_labels = test_dataset.labels
+
     # plot_roc_curve(test_labels, test_result.predictions)
     # plot_pr_curve(test_labels, test_result.predictions)
     plot_confusion_matrix(test_labels, test_preds, list(label2id.keys()))
 
-    print("\nFinal Evaluation Results:")
-    for key, value in eval_result.items():
-        if isinstance(value, (int, float)):
-            print(f"{key}: {value:.4f}")
+    # Generate classification reports
+    val_report = classification_report(val_labels, val_preds, target_names=list(label2id.keys()), digits=4)
+    test_report = classification_report(test_labels, test_preds, target_names=list(label2id.keys()), digits=4)
 
-    print("\nTest Results:")
-    for key, value in test_result.metrics.items():
-        if isinstance(value, (int, float)):
-            print(f"{key}: {value:.4f}")
+    # Print reports
+    print("\nValidation Set Results:")
+    print(val_report)
+
+    print("\nTest Set Results:")
+    print(test_report)
 
     # Save results to JSON
     results = {
-        'cls': 'sentiment',
-        'seed': args.seed,
-        'eval_result': eval_result,
-        'train_time': train_time,
-        'model_name': args.model_name,
-        'batch_size': args.batch_size,
-        'epochs': args.epochs,
-        'learning_rate': args.learning_rate,
-        'weight_decay': args.weight_decay,
-        'accumulation_steps': args.accumulation_steps,
-        'warmup_steps': args.warmup_steps,
-        'warmup_ratio': args.warmup_ratio,
-        'loss_type': args.loss_type,
-        'lr_scheduler_type': args.lr_scheduler_type,
+        'validation_report': val_report,
+        'test_report': test_report,
+        'eval_metrics': val_result.metrics,
+        'test_metrics': test_result.metrics
     }
 
-    json_file_path = '../output/bert_training_details.json'
-    if os.path.exists(json_file_path):
-        with open(json_file_path, 'r') as f:
+    if os.path.exists(output_path):
+        with open(output_path, 'r') as f:
             existing_results = json.load(f)
     else:
         existing_results = []
+
     existing_results.append(results)
-    with open(json_file_path, 'w') as f:
+
+    with open(output_path, 'w') as f:
         json.dump(existing_results, f, indent=4)
-
-
-def mytest(args, trainer, tokenizer):
-    # model_dir = f'../citation_finetuned_models/{args.model_name}'
-    # trainer.save_model(model_dir)
-
-    test_texts, test_labels, _, _, _, _, = load_sentiment_datasets(test_size=0.1, seed=args.seed,
-                                                                   filepath='../data/corpus.txt')
-    test_dataset = SentimentDataset(
-        tokenizer(test_texts, truncation=True, padding=True, return_tensors='pt', max_length=512),
-        test_labels)
-    predictions = trainer.predict(test_dataset)
-    preds = predictions.predictions.argmax(-1)
-
-    # Compute metrics
-    accuracy = accuracy_score(test_labels, preds)
-    precision, recall, f1, _ = precision_recall_fscore_support(test_labels, preds, average='macro')
-
-    # Print metrics
-    print(f"Accuracy: {accuracy:.4f}")
-    print(f"Precision: {precision:.4f}")
-    print(f"Recall: {recall:.4f}")
-    print(f"F1 Score: {f1:.4f}")
-
-    label2id = {"Neutral": 0, "Positive": 1, "Negative": 2}
-    plot_confusion_matrix(test_labels, preds, list(label2id.keys()))
 
 
 if __name__ == '__main__':

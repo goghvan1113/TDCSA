@@ -8,3 +8,6 @@
 /test/
 /bert/wandb/
 /bert with llama/results/
+bert/multitask_intent.py
+bert/__pycache__/
+

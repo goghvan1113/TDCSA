@@ -24,17 +24,10 @@ class CitationSentimentClassifier:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.classifier.to(self.device)
 
-    def continue_pretraining(self, negative_texts, batch_size=8, epochs=3):
+    def continue_pretraining(self, critical_texts, batch_size=8, epochs=3):
         """使用负面情感数据集继续预训练"""
 
-        def tokenize_function(examples):
-            return self.tokenizer(
-                examples['text'],
-                padding=True,
-                truncation=True,
-                max_length=512,
-                return_special_tokens_mask=True
-            )
+        critical_dataset = CitationDataset(critical_texts, np.ones(critical_texts), tokenizer)
 
         # 准备数据集
         dataset = Dataset.from_dict({'text': negative_texts})
@@ -171,6 +164,16 @@ class CitationSentimentClassifier:
 
         return history
 
+    def generate_soft_labels(self, texts: List[str]) -> np.ndarray:
+        """使用LLM为文本生成软标签"""
+        llm_predictions = []
+        for text in texts:
+            # 调用LLM生成预测概率，例如通过API接口
+            # probs = call_llm_api(text)
+            # llm_predictions.append(probs)
+            pass  # 实际实现中替换为真实的LLM调用
+        return np.array(llm_predictions)
+
     def train_classifier(self, train_texts, train_labels, eval_texts=None, eval_labels=None):
         """训练三分类分类器"""
         train_encodings = self.tokenizer(
@@ -226,6 +229,21 @@ class CitationSentimentClassifier:
         outputs = self.classifier(**inputs)
         predictions = torch.argmax(outputs.logits, dim=-1)
         return predictions.tolist()
+
+# 定义自定义数据集
+class CitationDataset(Dataset):
+    def __init__(self, texts, labels, tokenizer, max_length=256):
+        self.encodings = tokenizer(texts, truncation=True, padding=True, max_length=max_length)
+        self.labels = labels
+        
+    def __getitem__(self, idx):
+        item = {key: torch.tensor(val[idx]) for key, val in self.encodings.items()}
+        item['labels'] = torch.tensor(self.labels[idx])
+        return item
+    
+    def __len__(self):
+        return len(self.labels)
+
 
 def load_sentiment_datasets(test_size=0.4, seed=42, filepath='../data/corpus.txt', is_split=True):
     sentences, labels = [], []
@@ -285,6 +303,11 @@ def main():
     negative_texts = load_negative_texts()
     # 1. 使用负面情感数据集进行继续预训练
     classifier.continue_pretraining(negative_texts)
+
+    # 使用LLM为negative_texts生成软标签
+    llm_predictions = classifier.generate_soft_labels(negative_texts)
+    # 使用LLM生成的软标签进行知识蒸馏
+    classifier.knowledge_distillation(negative_texts, llm_predictions)
 
     train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = load_sentiment_datasets()
 

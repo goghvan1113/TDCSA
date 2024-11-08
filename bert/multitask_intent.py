@@ -23,7 +23,6 @@ from bert.plot_results import plot_confusion_matrix
 
 def main(args):
     # 1. 设置一些超参数
-    test_size = 0.4
     sentiment_id2label = {0: "Neutral", 1: "Positive", 2: "Negative"}
     sentiment_label2id = {"Neutral": 0, "Positive": 1, "Negative": 2}
     intent_id2label = {0: "background", 1: "method", 2: "result"}
@@ -47,7 +46,8 @@ def main(args):
 
     # 3. 定义评估指标
     train_data, val_data, test_data = load_multitask_datasets(
-        test_size=test_size,
+        test_size=0.2,
+        val_size=0.1,
         seed=args.seed,
         tokenizer=tokenizer,
         stratify_by_sentiment=True
@@ -91,7 +91,7 @@ def main(args):
         train_dataset=train_data,
         eval_dataset=val_data,
         tokenizer=tokenizer,
-        compute_metrics=compute_metrics,
+        compute_metrics=lambda eval_pred: compute_metrics(eval_pred, model.config),
         callbacks=[plotting_callback]
     )
     trainer.train()
@@ -436,25 +436,12 @@ class MultitaskTrainer(Trainer):
 
         focal_loss = MultiFocalLoss(num_class=3, alpha=model.config.focal_alpha, gamma=model.config.focal_gamma)
 
-        def smoothing_loss(logits, labels, smoothing):
-            confidence = 1.0 - smoothing
-            num_classes = logits.shape[-1]
-            true_dist = torch.zeros_like(logits)
-            true_dist.fill_(smoothing / (num_classes - 1))
-            true_dist.scatter_(1, labels.unsqueeze(1), confidence)
-            return torch.mean(torch.sum(-true_dist * F.log_softmax(logits, dim=1), dim=1))
-
-
         if model.config.loss_type == "focal_loss":
             sentiment_loss = focal_loss(sentiment_logits, sentiment_labels)
             intent_loss = focal_loss(intent_logits, intent_labels)
         else:
-            if model.config.label_smoothing > 0:
-                sentiment_loss = smoothing_loss(sentiment_logits, sentiment_labels, model.config.label_smoothing)
-                intent_loss = smoothing_loss(intent_logits, intent_labels, model.config.label_smoothing)
-            else:
-                sentiment_loss = F.cross_entropy(sentiment_logits, sentiment_labels)
-                intent_loss = F.cross_entropy(intent_logits, intent_labels)
+            sentiment_loss = F.cross_entropy(sentiment_logits, sentiment_labels, label_smoothing=model.config.label_smoothing)
+            intent_loss = F.cross_entropy(intent_logits, intent_labels, label_smoothing=model.config.label_smoothing)
 
         loss = model.config.sentiment_weight * sentiment_loss + model.config.intent_weight * intent_loss
         # loss = task_weights[0] * sentiment_loss + task_weights[1] * intent_loss
@@ -473,7 +460,7 @@ class MultitaskTrainer(Trainer):
         return (loss, outputs) if return_outputs else loss
 
 
-def compute_metrics(eval_pred):
+def compute_metrics(eval_pred, config):
     """
        计算评估指标
        eval_pred: 包含模型预测结果和真实标签的元组，结构为:
@@ -485,10 +472,26 @@ def compute_metrics(eval_pred):
     sentiment_logits, intent_logits, task_weights = predictions  # 解包predictions
     sentiment_labels, intent_labels = labels  # 解包labels
 
+    sentiment_logits = torch.tensor(sentiment_logits)
+    intent_logits = torch.tensor(intent_logits)
+    sentiment_labels = torch.tensor(sentiment_labels)
+    intent_labels = torch.tensor(intent_labels)
+
+
+
+    if config.loss_type == "focal_loss":
+        loss_fct = MultiFocalLoss(num_class=3, alpha=config.focal_alpha, gamma=config.focal_gamma)
+    else:
+        loss_fct = nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
+
+    sentiment_loss = loss_fct(sentiment_logits, sentiment_labels)
+    intent_loss = loss_fct(intent_logits, intent_labels)
+
+    loss = config.sentiment_weight * sentiment_loss + config.intent_weight * intent_loss
+
     # 计算预测结果
     sentiment_preds = np.argmax(sentiment_logits, axis=1)
     intent_preds = np.argmax(intent_logits, axis=1)
-
     # 计算准确率和F1分数
     sentiment_accuracy = accuracy_score(sentiment_labels, sentiment_preds)
     sentiment_f1 = f1_score(sentiment_labels, sentiment_preds, average='macro')
@@ -500,6 +503,9 @@ def compute_metrics(eval_pred):
     current_intent_weight = float(task_weights[1])
 
     return {
+        "eval_loss": loss.item(),
+        "eval_sentiment_loss": sentiment_loss.item(),
+        "eval_intent_loss": intent_loss.item(),
         "sentiment_accuracy": sentiment_accuracy,
         "sentiment_f1_macro": sentiment_f1,
         "intent_accuracy": intent_accuracy,
@@ -537,19 +543,19 @@ def seed_everything(seed):
     torch.backends.cudnn.benchmark = False
 
 
-def load_multitask_datasets(test_size=0.2, seed=42, tokenizer=None, stratify_by_sentiment=True):
-    df = pd.read_csv('../output/corpus_with_intent.csv', encoding='utf-8')
-    df = df[df['intent'] != 'unknown']
-    df = df[df['confidence'] > 0.6] # 处理unknown和低置信度的样本，低置信度的样本会影响分类效果
+def load_multitask_datasets(test_size=0.2, val_size=0.1, seed=42, tokenizer=None, stratify_by_sentiment=True):
+    df = pd.read_csv('../output/corpus_with_intent_bert.csv', encoding='utf-8')
+    # df = df[df['intent'] != 'unknown']
+    # df = df[df['confidence'] > 0.6] # 处理unknown和低置信度的样本，低置信度的样本会影响分类效果
 
-    intent_label2id = {"background": 0, "method": 1, "result": 2}
-    df['intent'] = df['intent'].map(intent_label2id).astype(int)
+    # intent_label2id = {"background": 0, "method": 1, "result": 2}
+    # df['intent'] = df['intent'].map(intent_label2id).astype(int)
 
     texts = df['text'].tolist()
     sentiment_labels = df['sentiment'].tolist()
     intent_labels = df['intent'].tolist()
 
-    train_texts, temp_texts, train_sentiment_labels, temp_sentiment_labels, train_intent_labels, temp_intent_labels = train_test_split(
+    train_val_texts, test_texts, train_val_labels, test_sentiment_labels, train_val_labels_intent, test_intent_labels = train_test_split(
         texts,
         sentiment_labels,
         intent_labels,
@@ -558,14 +564,14 @@ def load_multitask_datasets(test_size=0.2, seed=42, tokenizer=None, stratify_by_
         random_state=seed
     )
 
-    val_texts, test_texts, val_sentiment_labels, test_sentiment_labels, val_intent_labels, test_intent_labels = train_test_split(
-        temp_texts,
-        temp_sentiment_labels,
-        temp_intent_labels,
-        test_size=0.6,
-        stratify=temp_sentiment_labels if stratify_by_sentiment else None,
-        random_state=seed
-    )
+    val_ratio = val_size / (1 - test_size)
+    train_texts, val_texts, train_sentiment_labels, val_sentiment_labels, train_intent_labels, val_intent_labels = train_test_split(
+        train_val_texts,
+        train_val_labels,
+        train_val_labels_intent,
+        test_size=val_ratio,
+        stratify=train_val_labels if stratify_by_sentiment else None,
+        random_state=seed)
 
     train_data = MultiTaskDataset(
         tokenizer(train_texts, truncation=True, padding=True, return_tensors='pt', max_length=512),
