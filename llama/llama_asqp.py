@@ -27,189 +27,6 @@ def seed_everything(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-
-def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device):
-    system_prompt = '''
-        You are an AI assistant specialized in analyzing scientific citations and extracting aspect sentiment quadruples according to the following elements definition:
-        
-        -An "aspect term" refers to a specific contribution, method, finding, or component of the cited work that appears explicitly as a substring in the citation text
-        -An "opinion term" refers to the evaluation or assessment expressed towards a particular aspect of the cited work, appearing explicitly as a substring in the citation text
-        -The "aspect category" indicates the broad category that the aspect term belongs to, chosen from a predefined set:
-            * METHODOLOGY (research methods, algorithms, frameworks)
-            * PERFORMANCE (results, efficiency, accuracy)
-            * INNOVATION (novelty, contributions)
-            * APPLICABILITY (usefulness, practical value)
-            * LIMITATION (drawbacks, constraints)
-            * COMPARISON (relationship to other work)
-        -The "sentiment polarity" indicates the author's attitude towards the cited aspect: "positive" or "negative"
-                
-        Rules:
-        1. Only extract up to 2 sentiment quadruples per citation.
-        2. Aspect terms and opinion terms must be exact matches from the text.
-        3. Aspect category must be one of the predefined categories.
-        4. Sentiment polarity must be either "positive" or "negative".
-        5. Ignore purely objective statements without evaluative content.
-
-        Example 1:
-        Text: Substantial improvements have been made to parse western language such as English, and many powerful models have been proposed.
-        Overall Sentiment: Positive
-        Sentiment Triplets:
-        [("improvements", "substantial", "PERFORMANCE", "positive"), ("models", "powerful", "METHODOLOGY", "positive")]
-
-        Example 2:
-        Text: However, one of the major limitations of these advances is the structured syntactic knowledge, which is important to global reordering, has not been well exploited.
-        Overall Sentiment: Negative
-        Sentiment Triplets:
-        [("structured syntactic knowledge", "has not been well exploited", "LIMITATION", "negative"), ("syntactic knowledge", "important", "METHODOLOGY", "positive")]
-
-        '''
-
-    user_prompt = f'''
-        Analyze the sentiment elements in this scientific citation text. Provide exactly up to 2 quadruples containing (aspect term, opinion term, aspect category, sentiment polarity) for the following citation:
-        
-        Text: {text}
-        Overall Sentiment: {sentiment}
-        
-        Provide your response in the format of a Python list of tuples:
-        Sentiment elements: [("aspect term", "opinion term", "aspect category", "sentiment polarity"), ("aspect term", "opinion term", "aspect category", "sentiment polarity")]
-        
-        Only include the list of quadruples in your response, with no additional text.
-        '''
-    messages = [
-        {'role': 'system', 'content': system_prompt},
-        {'role': 'user', 'content': user_prompt}
-    ]
-
-    input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    model_input = tokenizer([input_text], return_tensors='pt').to(device)
-
-    attention_mask = torch.ones(model_input.input_ids.shape, dtype=torch.long, device=device)
-    generated_ids = model.generate(
-        model_input.input_ids,
-        max_new_tokens=128,
-        num_return_sequences=1,
-        attention_mask=attention_mask,
-        pad_token_id=tokenizer.eos_token_id,
-        do_sample=True,
-        temperature=0.7,
-        top_p=0.95,
-    )
-    generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in
-                     zip(model_input.input_ids, generated_ids)]  # remove the input text
-    response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
-    # print(response)
-
-    try:
-        # Extract the quadruples list from the response
-        quadruples_str = response.split("Sentiment elements:")[-1].strip()
-        # Convert string to Python list using eval()
-        quadruples = eval(quadruples_str)
-        return quadruples
-    except:
-        print("Error in extracting sentiment quadruples")
-        print(response)
-        return []
-
-
-
-# 算是chain of thoughts模式
-def verify_quadruples_quality(text, quadruples, tokenizer, model, device):
-    system_prompt = '''
-        You are an expert system for verifying the quality of aspect-sentiment quadruples extracted from scientific citations.
-        Focus on validating three key relationships in the extracted quadruples:
-
-        1. Aspect-Opinion Relationship:
-           - Verify if the aspect and opinion terms form a valid evaluative relationship
-           - Check if the opinion actually describes/evaluates the aspect
-           - Consider both explicit and implicit academic evaluations
-
-        2. Aspect-Category Mapping:
-           Categories:
-           METHODOLOGY: research methods, algorithms, frameworks
-           PERFORMANCE: results, efficiency, accuracy
-           INNOVATION: novelty, contributions
-           APPLICABILITY: usefulness, practical value
-           LIMITATION: drawbacks, constraints
-           COMPARISON: comparative analysis
-
-           - Verify if the aspect properly belongs to assigned category
-           - Each aspect should clearly fit its category definition
-
-        3. Opinion-Sentiment Consistency:
-           - Verify if the sentiment polarity matches the opinion's meaning
-           - Consider academic writing context and hedging language
-           - Check for implicit sentiments in comparisons or gap statements
-
-        Response Rules:
-         - Output ONLY the JSON response with no additional text
-         - If a quadruple is valid (is_valid: true):
-          * Set issues to empty list []
-          * Set correction to null
-         - If a quadruple is invalid (is_valid: false):
-          * List specific issues with format "relationship_type: specific_issue"
-          * Provide correction with suggested changes
-          * New aspect terms and opinion terms must be exact matches from the text.
-          * New aspect category in correction must be one of the predefined categories.
-        '''
-
-    user_prompt = f'''
-        Citation: {text}
-        Quadruples: {quadruples}
-        
-        Analyze the given quadruples and provide your thoughts on their validity. Do not return any code. Provide your response in the format of a JSON object with the following structure:
-        {{
-            "validations": [
-                {{
-                    "quadruple": [aspect, opinion, category, polarity],
-                    "is_valid": boolean,
-                    "confidence": float,
-                    "issues": [] if is_valid else ["Relationship Type: detailed explanation"],
-                    "correction": null if is_valid else [new_aspect, new_opinion, new_category, new_polarity]
-                }}
-            ],
-            "overall_quality": float
-        }}
-        
-        New aspect terms and opinion terms must be exact matches from the text, new aspect category in correction must be one of the predefined categories.
-        '''
-
-    messages = [
-        {'role': 'system', 'content': system_prompt},
-        {'role': 'user', 'content': user_prompt}
-    ]
-
-    input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    model_input = tokenizer([input_text], return_tensors='pt').to(device)
-
-    attention_mask = torch.ones(model_input.input_ids.shape, dtype=torch.long, device=device)
-    generated_ids = model.generate(
-        model_input.input_ids,
-        max_new_tokens=512,  # Increased for detailed feedback
-        num_return_sequences=1,
-        attention_mask=attention_mask,
-        pad_token_id=tokenizer.eos_token_id,
-        do_sample=True,
-        temperature=0.3,  # Lower temperature for more focused response
-        top_p=0.95,
-    )
-
-    generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in
-                     zip(model_input.input_ids, generated_ids)]
-    response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
-    print(response)
-
-    try:
-        validation_results = json.loads(response) #是{}格式
-        return validation_results
-    except json.JSONDecodeError as e: # 解析llm返回的代码错误
-        print(f"JSON parsing error: {e}")
-        print("Response:", response)
-        return None
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        print("Response:", response)
-        return None
-
 nvidia_model = "meta/llama-3.1-405b-instruct"
 nvidia_url = "https://integrate.api.nvidia.com/v1"
 api_key_1 = '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'  ## 1663653541
@@ -223,7 +40,126 @@ deepbricks_api = "sk-ybgZNYqegwDjhGRDZKIHOYoYQLWTCSLh52Qbv0uF81J0U3n0"
 deepbricks_url = "https://api.deepbricks.ai/v1/"
 deepbricks_model = "gpt-4o"
 
-def verify_quadruples_quality_api(text, quadruples):
+
+def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device, with_api=False):
+    system_prompt = '''
+        You are an AI assistant specialized in analyzing scientific citations and extracting aspect sentiment quadruples according to the following elements definition:
+
+        -An "aspect term" refers to a specific contribution, method, finding, or component of the cited work that appears explicitly as a substring in the citation text
+        -An "opinion term" refers to the evaluation or assessment expressed towards a particular aspect of the cited work, appearing explicitly as a substring in the citation text
+        -The "aspect category" indicates the broad category that the aspect term belongs to, chosen from a predefined set:
+            * METHODOLOGY (methods, algorithms, techniques, frameworks, or approaches)
+            * PERFORMANCE (results, efficiency, accuracy, effectiveness, or any measurable outcomes)
+            * INNOVATION (novelty, contributions, or advances in the field)
+            * APPLICABILITY (practical value, usefulness, or real-world applications)
+            * LIMITATION (drawbacks, constraints, weaknesses, or problems)
+        -The "sentiment polarity" indicates the author's attitude towards the cited aspect: "positive" or "negative"
+
+        Extraction Guidelines:
+        1. Only extract up to 2 sentiment quadruples per citation.
+        2. Language Patterns:
+            Aspects: noun phrases, technical terms, research components
+            Opinions: adjectives, verb phrases, adverb-adjective pairs
+        3. Ensure the aspect and opinion are explicitly mentioned in the text.
+        4. Aspect category must be one of the predefined categories, verify aspect-category alignment based on definitions.
+        5. Sentiment polarity must be either "positive" or "negative", consider academic context for polarity judgment.
+        6. Ignore purely objective statements without evaluative content.
+
+        Examples:
+        Text: Substantial improvements have been made to parse western language such as English, and many powerful models have been proposed.
+        Sentiment Triplets:
+        [("improvements", "substantial", "PERFORMANCE", "positive", 0.95), ("models", "powerful", "METHODOLOGY", "positive", 0.92)]
+
+        Text: However, one of the major limitations of these advances is the structured syntactic knowledge, which is important to global reordering, has not been well exploited.
+        Sentiment Triplets:
+        [("structured syntactic knowledge", "has not been well exploited", "LIMITATION", "negative", 0.90), ("syntactic knowledge", "important", "METHODOLOGY", "positive", 0.88)]
+
+        Special Cases to Consider:
+        1. Implicit Opinions:
+        When opinions are implied through comparison:
+        "Their method performs better than baseline approaches."
+        Sentiment Triplets:
+        [("method", "performs better", "PERFORMANCE", "positive", 0.93)]
+
+        2. Compound Aspects:
+        When multiple aspects are mentioned together:
+        "The model architecture and training strategy are innovative."
+        Sentiment Triplets:
+        [("model architecture", "innovative", "INNOVATION", "positive", 0.91), ("training strategy", "innovative", "INNOVATION", "positive", 0.91)]
+
+        3. Context-Dependent Polarity:
+        Consider academic writing context:
+        "This simple approach..." could be positive (elegance) or negative (oversimplified) depending on context.
+        '''
+
+    user_prompt = f'''
+        Analyze the sentiment elements in this scientific citation text. Provide exactly up to 2 quadruples containing (aspect term, opinion term, aspect category, sentiment polarity, confidence score) for the following citation:
+
+        Text: {text}
+        Overall Sentiment: {sentiment}
+
+        Provide your response in the format of a Python list of tuples:
+        Sentiment elements: [("aspect term", "opinion term", "aspect category", "sentiment polarity", confidence score), ("aspect term", "opinion term", "aspect category", "sentiment polarity", confidence score)]
+
+        Only include the list of quadruples in your response, with no additional text.
+        '''
+    messages = [
+        {'role': 'system', 'content': system_prompt},
+        {'role': 'user', 'content': user_prompt}
+    ]
+
+    if with_api:
+        client = OpenAI(
+            base_url=deepseek_url,
+            api_key=deepseek_api
+        )
+        response = client.chat.completions.create(
+            model=deepseek_model,
+            messages=messages,
+            max_tokens=128,
+            temperature=0.7,
+            top_p=0.95,
+            stream=False,
+        )
+        response = response.choices[0].message.content
+        response = response.strip('`json\n')  # 移除开头的```json
+        response = response.strip('`\n')  # 移除结尾的``
+        print(response)
+    else:
+        input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        model_input = tokenizer([input_text], return_tensors='pt').to(device)
+
+        attention_mask = torch.ones(model_input.input_ids.shape, dtype=torch.long, device=device)
+        generated_ids = model.generate(
+            model_input.input_ids,
+            max_new_tokens=128,
+            num_return_sequences=1,
+            attention_mask=attention_mask,
+            pad_token_id=tokenizer.eos_token_id,
+            do_sample=True,
+            temperature=0.7,
+            top_p=0.95,
+        )
+        generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in
+                         zip(model_input.input_ids, generated_ids)]  # remove the input text
+        response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
+        print(response)
+
+    try:
+        # Extract the quadruples list from the response
+        quadruples_str = response.split("Sentiment elements:")[-1].strip()
+        # Convert string to Python list using eval()
+        quadruples = eval(quadruples_str)
+        return quadruples
+    except:
+        print("Error in extracting sentiment quadruples")
+        print(response)
+        return []
+
+
+# 算是chain of thoughts模式
+def verify_quadruples_quality(text, quadruples, tokenizer, model, device, with_api=False):
+
     global api_call_count
     if api_call_count < max_api_calls:
         nvidia_api = api_key_1
@@ -232,93 +168,103 @@ def verify_quadruples_quality_api(text, quadruples):
     api_call_count += 1
 
     system_prompt = '''
-        You are an expert system for verifying the quality of aspect-sentiment quadruples extracted from scientific citations.
-        Focus on validating three key relationships in the extracted quadruples:
-
+        You are a critical thinking system for verifying the quality of aspect-sentiment quadruples extracted from scientific citations. Focus on validating three key relationships in the extracted quadruples through a concise verification process.
+    
         1. Aspect-Opinion Relationship:
-           - Verify if the aspect and opinion terms form a valid evaluative relationship
-           - Check if the opinion actually describes/evaluates the aspect
-           - Consider both explicit and implicit academic evaluations
-
+           - Does the opinion modify the aspect directly in context?
+           - Is this relationship valid in academic language?
+    
         2. Aspect-Category Mapping:
-           Categories:
-           METHODOLOGY: research methods, algorithms, frameworks
-           PERFORMANCE: results, efficiency, accuracy
-           INNOVATION: novelty, contributions
-           APPLICABILITY: usefulness, practical value
-           LIMITATION: drawbacks, constraints
-           COMPARISON: comparative analysis
-
-           - Verify if the aspect properly belongs to assigned category
-           - Each aspect should clearly fit its category definition
-
+           - Does the aspect naturally belong to the given category?
+           - Suggest alternatives if applicable.
+    
         3. Opinion-Sentiment Consistency:
-           - Verify if the sentiment polarity matches the opinion's meaning
-           - Consider academic writing context and hedging language
-           - Check for implicit sentiments in comparisons or gap statements
-
+           - Does the opinion-polarity pair match the intended academic sentiment?
+           - Consider writing conventions and context.
+    
         Response Rules:
-         - Output ONLY the JSON response with no additional text
-         - Ensure that the JSON uses double quotes for all strings
-         - If a quadruple is valid (is_valid: true):
-          * Set issues to empty list []
-          * Set correction to null
-         - If a quadruple is invalid (is_valid: false):
-          * List specific issues with format "relationship_type: specific_issue"
-          * Provide correction with suggested changes
-          * New aspect terms and opinion terms must be exact matches from the text.
-          * New aspect category in correction must be one of the predefined categories.
-        '''
+        - Provide JSON output only.
+        - If a quadruple is valid (is_valid: true), set "issues" as [] and "correction" as null.
+        - If invalid (is_valid: false), list issues as "Type: issue" format and provide a correction.
+    
+        Include confidence score (0-1) based on the clarity of the relationships and conventions observed. Use one of the predefined categories for corrections.
+    '''
 
     user_prompt = f'''
         Citation: {text}
         Quadruples: {quadruples}
-
-        Analyze the given quadruples and provide your thoughts on their validity. Provide your response in the format of a JSON object with the following structure:
+        
+        Analyze the quadruples for validity and provide a JSON response with this format:
         {{
             "validations": [
                 {{
                     "quadruple": [aspect, opinion, category, polarity],
                     "is_valid": boolean,
                     "confidence": float,
-                    "issues": [] if is_valid else ["Relationship Type: detailed explanation"],
+                    "issues": [] if is_valid else ["Type: issue"],
                     "correction": null if is_valid else [new_aspect, new_opinion, new_category, new_polarity]
                 }}
             ],
             "overall_quality": float
         }}
-        Ensure that the JSON uses double quotes for all strings.
+        
+        New aspect terms and opinion terms must be exact matches from the text, new aspect category in correction must be one of the predefined categories.
         '''
 
-    client = OpenAI(
-        base_url=deepseek_url,
-        api_key=deepseek_api  #
-    )
     messages = [
         {'role': 'system', 'content': system_prompt},
         {'role': 'user', 'content': user_prompt}
     ]
-    response = client.chat.completions.create(
-        model=deepseek_model, #
-        messages=messages,
-        max_tokens=512,
-        temperature=0.3,
-        top_p=0.95,
-        stream=False,
-    )
+    if with_api: # 使用api
+        client = OpenAI(
+            base_url=deepseek_url,
+            api_key=deepseek_api
+        )
+        response = client.chat.completions.create(
+            model=deepseek_model,
+            messages=messages,
+            max_tokens=512,
+            temperature=0.3,
+            top_p=0.95,
+            stream=False,
+        )
+        response = response.choices[0].message.content
+        response = response.strip('`json\n')  # 移除开头的```json
+        response = response.strip('`\n')  # 移除结尾的``
+        # print(response)
 
-    reply = response.choices[0].message.content
-    reply = reply.strip('`json\n')  # 移除开头的```json
-    reply = reply.strip('`\n')  # 移除结尾的``
-    print(reply)
+    else:
+        input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        model_input = tokenizer([input_text], return_tensors='pt').to(device)
+
+        attention_mask = torch.ones(model_input.input_ids.shape, dtype=torch.long, device=device)
+        generated_ids = model.generate(
+            model_input.input_ids,
+            max_new_tokens=512,  # Increased for detailed feedback
+            num_return_sequences=1,
+            attention_mask=attention_mask,
+            pad_token_id=tokenizer.eos_token_id,
+            do_sample=True,
+            temperature=0.3,  # Lower temperature for more focused response
+            top_p=0.95,
+        )
+
+        generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in
+                         zip(model_input.input_ids, generated_ids)]
+        response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
+        # print(response)
+
     try:
-        validation_results = json.loads(reply)
+        validation_results = json.loads(response) #是{}格式
         return validation_results
-    except json.JSONDecodeError as e:
+    except json.JSONDecodeError as e: # 解析llm返回的代码错误
         print(f"JSON parsing error: {e}")
-        print("Response:", reply)
+        print("Response:", response)
         return None
-
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        print("Response:", response)
+        return None
 
 def load_sentiment_datasets(test_size=0.2, val_size=0.1, seed=42, filepath='../data/corpus.txt', is_split=True):
     sentences, labels = [], []
@@ -411,13 +357,13 @@ def process_dataset(file_path, tokenizer, model, device):
 
     df = pd.DataFrame({'Citation_Text': sentences, 'Sentiment': labels})
     df = df[df['Sentiment'].isin(['positive', 'negative'])]
-    # df = df.head(5) # 测试用
+    df = df.head(5) # 测试用
 
     results = []
     for _, row in tqdm(df.iterrows(), desc="Processing citations", total=len(df)):
-        quadruples = extract_sentiment_quadruples(row['Citation_Text'], row['Sentiment'], tokenizer, model, device)
+        quadruples = extract_sentiment_quadruples(row['Citation_Text'], row['Sentiment'], tokenizer, model, device, with_api=False)
 
-        quadruples = [q for q in quadruples if len(q) == 4] # Filter out incomplete quadruples
+        quadruples = [q for q in quadruples if len(q) == 5] # Filter out incomplete quadruples
         if quadruples and quadruples[0] != (): # Check if quadruples is not empty
             quadruples = quadruples[:3] # Only extract up to 2 sentiment quadruples per citation 针对Athar数据集里面一个很短的和一个很长的flaw数据
 
@@ -426,8 +372,7 @@ def process_dataset(file_path, tokenizer, model, device):
                 'PERFORMANCE': len([q for q in quadruples if q[2] == 'PERFORMANCE']),
                 'INNOVATION': len([q for q in quadruples if q[2] == 'INNOVATION']),
                 'APPLICABILITY': len([q for q in quadruples if q[2] == 'APPLICABILITY']),
-                'LIMITATION': len([q for q in quadruples if q[2] == 'LIMITATION']),
-                'COMPARISON': len([q for q in quadruples if q[2] == 'COMPARISON'])
+                'LIMITATION': len([q for q in quadruples if q[2] == 'LIMITATION'])
             }
         else:
             category_stats = None
@@ -450,8 +395,8 @@ def process_dataset_with_verification(file_path, extractor_model, verifier_model
     Args:
         checkpoint_dir: Directory to save checkpoint files during processing
     """
-    # # First get the initial extractions
-    # initial_results = process_dataset(file_path, extractor_model, tokenizer, device)
+    # First get the initial extractions
+    # initial_results = process_dataset(file_path, tokenizer, extractor_model, device)
     # save_results(initial_results, initial_output_dir)
 
     if checkpoint_dir is None:
@@ -486,9 +431,13 @@ def process_dataset_with_verification(file_path, extractor_model, verifier_model
 
             while retry_count < max_retries:
                 try:
-                    verification = verify_quadruples_quality_api(
+                    verification = verify_quadruples_quality(
                         item['text'],
-                        item['sentiment_quadruples']
+                        item['sentiment_quadruples'],
+                        tokenizer,
+                        verifier_model,
+                        device,
+                        with_api=False
                     )
 
                     # Process verification results
@@ -600,22 +549,22 @@ def main():
     seed = 42
     seed_everything(seed)
 
-    file_path = '../data/citation_sentiment_corpus.csv'
+    file_path = '../data/citation_sentiment_corpus_expand.csv'
     initial_output_dir = '../output/sentiment_asqp_results_corpus_expand.json'
-    final_output_dir = '../output/sentiment_asqp_results_corpus_expand_verified1.json'
+    final_output_dir = '../output/sentiment_asqp_results_corpus_expand_verified.json'
     extractor_model_name = 'Meta-Llama-3-8B-Instruct'
     verifier_model_name = 'Meta-Llama-3.1-8B-Instruct'
     checkpoint_dir = 'checkpoints'
     device = 'cuda:0'
 
     tokenizer = AutoTokenizer.from_pretrained(f'../pretrain_models/{extractor_model_name}')
-    # extractor_model = AutoModelForCausalLM.from_pretrained(
-    #     f'../pretrain_models/{extractor_model_name}',
-    #     torch_dtype=torch.bfloat16,
-    #     attn_implementation='flash_attention_2',
-    #     device_map=device
-    # )
-    extractor_model = None #不加载到显存里面
+    extractor_model = AutoModelForCausalLM.from_pretrained(
+        f'../pretrain_models/{extractor_model_name}',
+        torch_dtype=torch.bfloat16,
+        attn_implementation='flash_attention_2',
+        device_map=device
+    )
+    # extractor_model = None #不加载到显存里面
     # verifier_model = AutoModelForCausalLM.from_pretrained(
     #     f'../pretrain_models/{verifier_model_name}',
     #     torch_dtype=torch.bfloat16,
@@ -624,17 +573,20 @@ def main():
     # )
     verifier_model = None
 
-    results, quality_metrics = process_dataset_with_verification(
-        file_path,
-        extractor_model,
-        verifier_model,
-        tokenizer,
-        device,
-        initial_output_dir,
-        final_output_dir,
-        checkpoint_dir
-    )
-    print("Quality metrics:", quality_metrics)
+    initial_results = process_dataset(file_path, tokenizer, extractor_model, device)
+    save_results(initial_results, initial_output_dir)
+
+    # results, quality_metrics = process_dataset_with_verification(
+    #     file_path,
+    #     extractor_model,
+    #     verifier_model,
+    #     tokenizer,
+    #     device,
+    #     initial_output_dir,
+    #     final_output_dir,
+    #     checkpoint_dir
+    # )
+    # print("Quality metrics:", quality_metrics)
 
     # 'average_confidence': 0.8289524599226354,
     # 'total_original_quadruples': 3618,
