@@ -242,7 +242,7 @@ def verify_quadruples_quality(text, quadruples, tokenizer, model, device, with_a
         validation_results = response.split('**Final Combined Response:**')[1]
         # validation_results = validation_results.strip('`json\n')  # 移除开头的```json
         # validation_results = validation_results.strip('`\n')  # 移除结尾的``
-        # print(response)
+        print(validation_results)
 
     else:
         input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
