@@ -1,0 +1,342 @@
+[
+  {
+    "text": "For the multilingual dependency parsing track, which was the other track of the shared task, Nilsson et al. achieved the best performance using an ensemble method  .",
+    "overall_sentiment": "positive",
+    "original_quadruples": [
+      [
+        "ensemble method",
+        "best",
+        "PERFORMANCE",
+        "positive",
+        0.95
+      ],
+      [
+        "Nilsson et al.",
+        "achieved",
+        "INNOVATION",
+        "positive",
+        0.92
+      ]
+    ],
+    "verification_results": {
+      "validations": [
+        {
+          "quadruple": [
+            "ensemble method",
+            "best",
+            "PERFORMANCE",
+            "positive"
+          ],
+          "is_valid": true,
+          "confidence": 0.95,
+          "issues": [],
+          "correction": null
+        },
+        {
+          "quadruple": [
+            "Nilsson et al.",
+            "achieved",
+            "PERFORMANCE",
+            "positive"
+          ],
+          "is_valid": true,
+          "confidence": 0.92,
+          "issues": [],
+          "correction": null
+        }
+      ],
+      "overall_quality": 0.935
+    },
+    "final_quadruples": [
+      [
+        "ensemble method",
+        "best",
+        "PERFORMANCE",
+        "positive"
+      ],
+      [
+        "Nilsson et al.",
+        "achieved",
+        "PERFORMANCE",
+        "positive"
+      ]
+    ]
+  },
+  {
+    "text": "In addition, the averaged parameters technology   is used to alleviate overfitting and achieve stable performance.",
+    "overall_sentiment": "positive",
+    "original_quadruples": [
+      [
+        "alleviate overfitting",
+        "alleviate",
+        "PERFORMANCE",
+        "positive",
+        0.95
+      ],
+      [
+        "stable performance",
+        "stable",
+        "PERFORMANCE",
+        "positive",
+        0.92
+      ]
+    ],
+    "verification_results": {
+      "validations": [
+        {
+          "quadruple": [
+            "alleviate overfitting",
+            "alleviate",
+            "PERFORMANCE",
+            "positive"
+          ],
+          "is_valid": true,
+          "confidence": 0.95,
+          "issues": [],
+          "correction": null
+        },
+        {
+          "quadruple": [
+            "stable performance",
+            "stable",
+            "PERFORMANCE",
+            "positive"
+          ],
+          "is_valid": true,
+          "confidence": 0.92,
+          "issues": [],
+          "correction": null
+        }
+      ],
+      "overall_quality": 0.935
+    },
+    "final_quadruples": [
+      [
+        "alleviate overfitting",
+        "alleviate",
+        "PERFORMANCE",
+        "positive"
+      ],
+      [
+        "stable performance",
+        "stable",
+        "PERFORMANCE",
+        "positive"
+      ]
+    ]
+  },
+  {
+    "text": "Although, there are various manual/automatic evaluation methods for these systems, e.g., BLEU  , these methods are basically incapable of dealing with an MTsystem and a w/p-MT-system at the same time, as they have different output forms.",
+    "overall_sentiment": "negative",
+    "original_quadruples": [
+      [
+        "methods",
+        "incapable",
+        "METHODOLOGY",
+        "negative",
+        0.9
+      ],
+      [
+        "output forms",
+        "different",
+        "METHODOLOGY",
+        "negative",
+        0.8
+      ]
+    ],
+    "verification_results": {
+      "validations": [
+        {
+          "quadruple": [
+            "methods",
+            "incapable",
+            "METHODOLOGY",
+            "negative"
+          ],
+          "is_valid": true,
+          "confidence": 0.9,
+          "issues": [],
+          "correction": null
+        },
+        {
+          "quadruple": [
+            "output forms",
+            "different",
+            "METHODOLOGY",
+            "negative"
+          ],
+          "is_valid": false,
+          "confidence": 0.8,
+          "issues": [
+            "Category mismatch: 'METHODOLOGY' is not suitable for 'output forms'"
+          ],
+          "correction": [
+            "output forms",
+            "different",
+            "OUTPUT FORMS",
+            "neutral"
+          ]
+        }
+      ],
+      "overall_quality": 0.85
+    },
+    "final_quadruples": [
+      [
+        "methods",
+        "incapable",
+        "METHODOLOGY",
+        "negative"
+      ],
+      [
+        "output forms",
+        "different",
+        "OUTPUT FORMS",
+        "neutral"
+      ]
+    ]
+  },
+  {
+    "text": "Head-lexicalized stochastic grammars have recently become increasingly popular  .",
+    "overall_sentiment": "positive",
+    "original_quadruples": [
+      [
+        "grammars",
+        "increasingly popular",
+        "INNOVATION",
+        "positive",
+        0.95
+      ]
+    ],
+    "verification_results": {
+      "validations": [
+        {
+          "quadruple": [
+            "grammars",
+            "increasingly popular",
+            "INNOVATION",
+            "positive"
+          ],
+          "is_valid": true,
+          "confidence": 0.95,
+          "issues": [],
+          "correction": null
+        },
+        {
+          "quadruple": [
+            "popular",
+            "increasingly popular",
+            "INNOVATION",
+            "positive"
+          ],
+          "is_valid": true,
+          "confidence": 0.95,
+          "issues": [],
+          "correction": null
+        },
+        {
+          "quadruple": [
+            "grammars",
+            "less popular",
+            "INNOVATION",
+            "negative"
+          ],
+          "is_valid": false,
+          "confidence": 0.95,
+          "issues": [
+            "Aspect-Opinion mismatch: 'grammars' and 'less popular' do not align with the context."
+          ],
+          "correction": [
+            "grammars",
+            "increasingly popular",
+            "INNOVATION",
+            "positive"
+          ]
+        }
+      ],
+      "overall_quality": 0.6666666666666666
+    },
+    "final_quadruples": [
+      [
+        "grammars",
+        "increasingly popular",
+        "INNOVATION",
+        "positive"
+      ],
+      [
+        "popular",
+        "increasingly popular",
+        "INNOVATION",
+        "positive"
+      ],
+      [
+        "grammars",
+        "increasingly popular",
+        "INNOVATION",
+        "positive"
+      ]
+    ]
+  },
+  {
+    "text": "Other systems (Morinaga et al., 2002; Kushal et al., 2003) also look at Web product reviews but they do not extract opinions about particular product features.",
+    "overall_sentiment": "negative",
+    "original_quadruples": [
+      [
+        "product features",
+        "particular",
+        "APPLICABILITY",
+        "negative",
+        0.8
+      ],
+      [
+        "other systems",
+        "do not extract",
+        "LIMITATION",
+        "negative",
+        0.7
+      ]
+    ],
+    "verification_results": {
+      "validations": [
+        {
+          "quadruple": [
+            "product features",
+            "particular",
+            "APPLICABILITY",
+            "negative"
+          ],
+          "is_valid": true,
+          "confidence": 0.8,
+          "issues": [],
+          "correction": null
+        },
+        {
+          "quadruple": [
+            "other systems",
+            "do not extract",
+            "LIMITATION",
+            "negative"
+          ],
+          "is_valid": true,
+          "confidence": 0.7,
+          "issues": [],
+          "correction": null
+        }
+      ],
+      "overall_quality": 0.75
+    },
+    "final_quadruples": [
+      [
+        "product features",
+        "particular",
+        "APPLICABILITY",
+        "negative"
+      ],
+      [
+        "other systems",
+        "do not extract",
+        "LIMITATION",
+        "negative"
+      ]
+    ]
+  }
+]

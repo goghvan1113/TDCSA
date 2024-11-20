@@ -622,5 +622,1013 @@
             "test_samples_per_second": 893.84,
             "test_steps_per_second": 28.341
         }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9744    0.9605    0.9674       633\n    Positive     0.8527    0.8871    0.8696       124\n    Negative     0.7761    0.8254    0.8000        63\n\n    accuracy                         0.9390       820\n   macro avg     0.8677    0.8910    0.8790       820\nweighted avg     0.9407    0.9390    0.9397       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9681    0.9573    0.9627      1266\n    Positive     0.8482    0.8790    0.8634       248\n    Negative     0.8092    0.8413    0.8249       126\n\n    accuracy                         0.9366      1640\n   macro avg     0.8752    0.8925    0.8836      1640\nweighted avg     0.9377    0.9366    0.9371      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.054041970521211624,
+            "test_Accuracy": 0.9390243902439024,
+            "test_Precision_Macro": 0.8677305185462075,
+            "test_Recall_Macro": 0.8909997096054273,
+            "test_F1_Macro": 0.8789826248371438,
+            "test_runtime": 0.698,
+            "test_samples_per_second": 1174.727,
+            "test_steps_per_second": 37.247
+        },
+        "test_metrics": {
+            "test_loss": 0.04765686020255089,
+            "test_Accuracy": 0.9365853658536586,
+            "test_Precision_Macro": 0.8751534835972427,
+            "test_Recall_Macro": 0.8925493569661128,
+            "test_F1_Macro": 0.8836459483729578,
+            "test_runtime": 2.0192,
+            "test_samples_per_second": 812.214,
+            "test_steps_per_second": 25.753
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9340    0.9646    0.9491       763\n    Positive     0.6719    0.5181    0.5850        83\n    Negative     0.4091    0.3214    0.3600        28\n\n    accuracy                         0.9016       874\n   macro avg     0.6717    0.6014    0.6314       874\nweighted avg     0.8923    0.9016    0.8956       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9389    0.9463    0.9426      1526\n    Positive     0.5948    0.5482    0.5705       166\n    Negative     0.4386    0.4464    0.4425        56\n\n    accuracy                         0.8924      1748\n   macro avg     0.6574    0.6470    0.6519      1748\nweighted avg     0.8902    0.8924    0.8912      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.09900659322738647,
+            "test_Accuracy": 0.9016018306636155,
+            "test_Precision_Macro": 0.6716586871250577,
+            "test_Recall_Macro": 0.6013714096227637,
+            "test_F1_Macro": 0.6313663776277757,
+            "test_runtime": 1.4488,
+            "test_samples_per_second": 603.256,
+            "test_steps_per_second": 19.326
+        },
+        "test_metrics": {
+            "test_loss": 0.08001822233200073,
+            "test_Accuracy": 0.8924485125858124,
+            "test_Precision_Macro": 0.6574164658524951,
+            "test_Recall_Macro": 0.6469620289809302,
+            "test_F1_Macro": 0.6518565127343295,
+            "test_runtime": 3.0574,
+            "test_samples_per_second": 571.736,
+            "test_steps_per_second": 17.989
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9730    0.9684    0.9707       633\n    Positive     0.8594    0.8871    0.8730       124\n    Negative     0.8710    0.8571    0.8640        63\n\n    accuracy                         0.9476       820\n   macro avg     0.9011    0.9042    0.9026       820\nweighted avg     0.9480    0.9476    0.9477       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9736    0.9605    0.9670      1266\n    Positive     0.8626    0.9113    0.8863       248\n    Negative     0.8527    0.8730    0.8627       126\n\n    accuracy                         0.9463      1640\n   macro avg     0.8963    0.9149    0.9053      1640\nweighted avg     0.9475    0.9463    0.9468      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.043106433004140854,
+            "test_Accuracy": 0.947560975609756,
+            "test_Precision_Macro": 0.901119538317119,
+            "test_Recall_Macro": 0.9042146849057108,
+            "test_F1_Macro": 0.9025735148110444,
+            "test_runtime": 0.6912,
+            "test_samples_per_second": 1186.26,
+            "test_steps_per_second": 37.613
+        },
+        "test_metrics": {
+            "test_loss": 0.03512853384017944,
+            "test_Accuracy": 0.9463414634146341,
+            "test_Precision_Macro": 0.8962958204107915,
+            "test_Recall_Macro": 0.9149372416074755,
+            "test_F1_Macro": 0.9053392065905221,
+            "test_runtime": 2.0484,
+            "test_samples_per_second": 800.613,
+            "test_steps_per_second": 25.385
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9375    0.9633    0.9502       763\n    Positive     0.7143    0.5422    0.6164        83\n    Negative     0.3333    0.3214    0.3273        28\n\n    accuracy                         0.9027       874\n   macro avg     0.6617    0.6090    0.6313       874\nweighted avg     0.8969    0.9027    0.8986       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9321    0.9541    0.9430      1526\n    Positive     0.5986    0.5120    0.5519       166\n    Negative     0.4318    0.3393    0.3800        56\n\n    accuracy                         0.8924      1748\n   macro avg     0.6542    0.6018    0.6250      1748\nweighted avg     0.8844    0.8924    0.8878      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.08742130547761917,
+            "test_Accuracy": 0.902745995423341,
+            "test_Precision_Macro": 0.6617063492063492,
+            "test_Recall_Macro": 0.6089666661403148,
+            "test_F1_Macro": 0.6313124425936674,
+            "test_runtime": 1.1517,
+            "test_samples_per_second": 758.894,
+            "test_steps_per_second": 24.312
+        },
+        "test_metrics": {
+            "test_loss": 0.07743533700704575,
+            "test_Accuracy": 0.8924485125858124,
+            "test_Precision_Macro": 0.6541826717883056,
+            "test_Recall_Macro": 0.6018207824745905,
+            "test_F1_Macro": 0.6249844110984007,
+            "test_runtime": 2.7412,
+            "test_samples_per_second": 637.668,
+            "test_steps_per_second": 20.064
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9724    0.9447    0.9583       633\n    Positive     0.8168    0.8629    0.8392       124\n    Negative     0.7703    0.9048    0.8321        63\n\n    accuracy                         0.9293       820\n   macro avg     0.8531    0.9041    0.8766       820\nweighted avg     0.9333    0.9293    0.9306       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9764    0.9494    0.9628      1266\n    Positive     0.8429    0.8871    0.8644       248\n    Negative     0.7905    0.9286    0.8540       126\n\n    accuracy                         0.9384      1640\n   macro avg     0.8700    0.9217    0.8937      1640\nweighted avg     0.9420    0.9384    0.9395      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.07251892983913422,
+            "test_Accuracy": 0.9292682926829269,
+            "test_Precision_Macro": 0.8531406289924256,
+            "test_Recall_Macro": 0.9041242904948761,
+            "test_F1_Macro": 0.8765552693096703,
+            "test_runtime": 1.2224,
+            "test_samples_per_second": 670.826,
+            "test_steps_per_second": 21.27
+        },
+        "test_metrics": {
+            "test_loss": 0.04588675498962402,
+            "test_Accuracy": 0.9384146341463414,
+            "test_Precision_Macro": 0.8699647783585709,
+            "test_Recall_Macro": 0.9217050933913798,
+            "test_F1_Macro": 0.8937366611644162,
+            "test_runtime": 3.5038,
+            "test_samples_per_second": 468.057,
+            "test_steps_per_second": 14.841
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9396    0.9581    0.9487       763\n    Positive     0.7101    0.5904    0.6447        83\n    Negative     0.3704    0.3571    0.3636        28\n\n    accuracy                         0.9039       874\n   macro avg     0.6734    0.6352    0.6524       874\nweighted avg     0.8996    0.9039    0.9011       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9505    0.9443    0.9474      1526\n    Positive     0.6057    0.6386    0.6217       166\n    Negative     0.5088    0.5179    0.5133        56\n\n    accuracy                         0.9016      1748\n   macro avg     0.6883    0.7002    0.6941      1748\nweighted avg     0.9036    0.9016    0.9026      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.08353935927152634,
+            "test_Accuracy": 0.9038901601830663,
+            "test_Precision_Macro": 0.6733679956175392,
+            "test_Recall_Macro": 0.6351881970871691,
+            "test_F1_Macro": 0.6523692645571808,
+            "test_runtime": 2.287,
+            "test_samples_per_second": 382.163,
+            "test_steps_per_second": 12.243
+        },
+        "test_metrics": {
+            "test_loss": 0.06992257386445999,
+            "test_Accuracy": 0.9016018306636155,
+            "test_Precision_Macro": 0.6883379733414451,
+            "test_Recall_Macro": 0.7002367267234074,
+            "test_F1_Macro": 0.6941260801248944,
+            "test_runtime": 5.1266,
+            "test_samples_per_second": 340.968,
+            "test_steps_per_second": 10.728
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9422    0.9620    0.9520       763\n    Positive     0.6986    0.6145    0.6538        83\n    Negative     0.5000    0.3929    0.4400        28\n\n    accuracy                         0.9108       874\n   macro avg     0.7136    0.6564    0.6820       874\nweighted avg     0.9049    0.9108    0.9073       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9420    0.9476    0.9448      1526\n    Positive     0.5939    0.5904    0.5921       166\n    Negative     0.4167    0.3571    0.3846        56\n\n    accuracy                         0.8947      1748\n   macro avg     0.6509    0.6317    0.6405      1748\nweighted avg     0.8921    0.8947    0.8934      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.0871257483959198,
+            "test_Accuracy": 0.9107551487414187,
+            "test_Precision_Macro": 0.7136212566163153,
+            "test_Recall_Macro": 0.6564357034955023,
+            "test_F1_Macro": 0.6819521766603479,
+            "test_runtime": 1.9849,
+            "test_samples_per_second": 440.319,
+            "test_steps_per_second": 14.106
+        },
+        "test_metrics": {
+            "test_loss": 0.07799423485994339,
+            "test_Accuracy": 0.8947368421052632,
+            "test_Precision_Macro": 0.6508752015266673,
+            "test_Recall_Macro": 0.631693221115129,
+            "test_F1_Macro": 0.6405165614228862,
+            "test_runtime": 5.1498,
+            "test_samples_per_second": 339.431,
+            "test_steps_per_second": 10.68
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9677    0.9463    0.9569       633\n    Positive     0.8154    0.8548    0.8346       124\n    Negative     0.7606    0.8571    0.8060        63\n\n    accuracy                         0.9256       820\n   macro avg     0.8479    0.8861    0.8658       820\nweighted avg     0.9287    0.9256    0.9268       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9727    0.9558    0.9641      1266\n    Positive     0.8555    0.8831    0.8690       248\n    Negative     0.8000    0.8889    0.8421       126\n\n    accuracy                         0.9396      1640\n   macro avg     0.8760    0.9092    0.8918      1640\nweighted avg     0.9417    0.9396    0.9404      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.06656129658222198,
+            "test_Accuracy": 0.925609756097561,
+            "test_Precision_Macro": 0.8478792726534428,
+            "test_Recall_Macro": 0.886089695522504,
+            "test_F1_Macro": 0.8658282760432449,
+            "test_runtime": 1.4046,
+            "test_samples_per_second": 583.807,
+            "test_steps_per_second": 18.511
+        },
+        "test_metrics": {
+            "test_loss": 0.04866592213511467,
+            "test_Accuracy": 0.9396341463414634,
+            "test_Precision_Macro": 0.8760458534297962,
+            "test_Recall_Macro": 0.9092398659169795,
+            "test_F1_Macro": 0.8917654361667782,
+            "test_runtime": 3.5504,
+            "test_samples_per_second": 461.925,
+            "test_steps_per_second": 14.646
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9422    0.9620    0.9520       763\n    Positive     0.6986    0.6145    0.6538        83\n    Negative     0.5000    0.3929    0.4400        28\n\n    accuracy                         0.9108       874\n   macro avg     0.7136    0.6564    0.6820       874\nweighted avg     0.9049    0.9108    0.9073       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9420    0.9476    0.9448      1526\n    Positive     0.5939    0.5904    0.5921       166\n    Negative     0.4167    0.3571    0.3846        56\n\n    accuracy                         0.8947      1748\n   macro avg     0.6509    0.6317    0.6405      1748\nweighted avg     0.8921    0.8947    0.8934      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.0871257483959198,
+            "test_Accuracy": 0.9107551487414187,
+            "test_Precision_Macro": 0.7136212566163153,
+            "test_Recall_Macro": 0.6564357034955023,
+            "test_F1_Macro": 0.6819521766603479,
+            "test_runtime": 2.1097,
+            "test_samples_per_second": 414.276,
+            "test_steps_per_second": 13.272
+        },
+        "test_metrics": {
+            "test_loss": 0.07799423485994339,
+            "test_Accuracy": 0.8947368421052632,
+            "test_Precision_Macro": 0.6508752015266673,
+            "test_Recall_Macro": 0.631693221115129,
+            "test_F1_Macro": 0.6405165614228862,
+            "test_runtime": 5.0258,
+            "test_samples_per_second": 347.806,
+            "test_steps_per_second": 10.944
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9422    0.9620    0.9520       763\n    Positive     0.6986    0.6145    0.6538        83\n    Negative     0.5000    0.3929    0.4400        28\n\n    accuracy                         0.9108       874\n   macro avg     0.7136    0.6564    0.6820       874\nweighted avg     0.9049    0.9108    0.9073       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9420    0.9476    0.9448      1526\n    Positive     0.5939    0.5904    0.5921       166\n    Negative     0.4167    0.3571    0.3846        56\n\n    accuracy                         0.8947      1748\n   macro avg     0.6509    0.6317    0.6405      1748\nweighted avg     0.8921    0.8947    0.8934      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.0871257483959198,
+            "test_Accuracy": 0.9107551487414187,
+            "test_Precision_Macro": 0.7136212566163153,
+            "test_Recall_Macro": 0.6564357034955023,
+            "test_F1_Macro": 0.6819521766603479,
+            "test_runtime": 2.03,
+            "test_samples_per_second": 430.531,
+            "test_steps_per_second": 13.793
+        },
+        "test_metrics": {
+            "test_loss": 0.07799423485994339,
+            "test_Accuracy": 0.8947368421052632,
+            "test_Precision_Macro": 0.6508752015266673,
+            "test_Recall_Macro": 0.631693221115129,
+            "test_F1_Macro": 0.6405165614228862,
+            "test_runtime": 4.3693,
+            "test_samples_per_second": 400.065,
+            "test_steps_per_second": 12.588
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9730    0.9684    0.9707       633\n    Positive     0.8594    0.8871    0.8730       124\n    Negative     0.8710    0.8571    0.8640        63\n\n    accuracy                         0.9476       820\n   macro avg     0.9011    0.9042    0.9026       820\nweighted avg     0.9480    0.9476    0.9477       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9736    0.9605    0.9670      1266\n    Positive     0.8626    0.9113    0.8863       248\n    Negative     0.8527    0.8730    0.8627       126\n\n    accuracy                         0.9463      1640\n   macro avg     0.8963    0.9149    0.9053      1640\nweighted avg     0.9475    0.9463    0.9468      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.043106433004140854,
+            "test_Accuracy": 0.947560975609756,
+            "test_Precision_Macro": 0.901119538317119,
+            "test_Recall_Macro": 0.9042146849057108,
+            "test_F1_Macro": 0.9025735148110444,
+            "test_runtime": 0.7221,
+            "test_samples_per_second": 1135.647,
+            "test_steps_per_second": 36.008
+        },
+        "test_metrics": {
+            "test_loss": 0.03512853384017944,
+            "test_Accuracy": 0.9463414634146341,
+            "test_Precision_Macro": 0.8962958204107915,
+            "test_Recall_Macro": 0.9149372416074755,
+            "test_F1_Macro": 0.9053392065905221,
+            "test_runtime": 1.7836,
+            "test_samples_per_second": 919.486,
+            "test_steps_per_second": 29.154
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9730    0.9684    0.9707       633\n    Positive     0.8594    0.8871    0.8730       124\n    Negative     0.8710    0.8571    0.8640        63\n\n    accuracy                         0.9476       820\n   macro avg     0.9011    0.9042    0.9026       820\nweighted avg     0.9480    0.9476    0.9477       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9736    0.9605    0.9670      1266\n    Positive     0.8626    0.9113    0.8863       248\n    Negative     0.8527    0.8730    0.8627       126\n\n    accuracy                         0.9463      1640\n   macro avg     0.8963    0.9149    0.9053      1640\nweighted avg     0.9475    0.9463    0.9468      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.043106433004140854,
+            "test_Accuracy": 0.947560975609756,
+            "test_Precision_Macro": 0.901119538317119,
+            "test_Recall_Macro": 0.9042146849057108,
+            "test_F1_Macro": 0.9025735148110444,
+            "test_runtime": 0.8185,
+            "test_samples_per_second": 1001.794,
+            "test_steps_per_second": 31.764
+        },
+        "test_metrics": {
+            "test_loss": 0.03512853384017944,
+            "test_Accuracy": 0.9463414634146341,
+            "test_Precision_Macro": 0.8962958204107915,
+            "test_Recall_Macro": 0.9149372416074755,
+            "test_F1_Macro": 0.9053392065905221,
+            "test_runtime": 1.795,
+            "test_samples_per_second": 913.672,
+            "test_steps_per_second": 28.97
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9730    0.9684    0.9707       633\n    Positive     0.8594    0.8871    0.8730       124\n    Negative     0.8710    0.8571    0.8640        63\n\n    accuracy                         0.9476       820\n   macro avg     0.9011    0.9042    0.9026       820\nweighted avg     0.9480    0.9476    0.9477       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9736    0.9605    0.9670      1266\n    Positive     0.8626    0.9113    0.8863       248\n    Negative     0.8527    0.8730    0.8627       126\n\n    accuracy                         0.9463      1640\n   macro avg     0.8963    0.9149    0.9053      1640\nweighted avg     0.9475    0.9463    0.9468      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.043106433004140854,
+            "test_Accuracy": 0.947560975609756,
+            "test_Precision_Macro": 0.901119538317119,
+            "test_Recall_Macro": 0.9042146849057108,
+            "test_F1_Macro": 0.9025735148110444,
+            "test_runtime": 0.8124,
+            "test_samples_per_second": 1009.313,
+            "test_steps_per_second": 32.003
+        },
+        "test_metrics": {
+            "test_loss": 0.03512853384017944,
+            "test_Accuracy": 0.9463414634146341,
+            "test_Precision_Macro": 0.8962958204107915,
+            "test_Recall_Macro": 0.9149372416074755,
+            "test_F1_Macro": 0.9053392065905221,
+            "test_runtime": 1.8109,
+            "test_samples_per_second": 905.644,
+            "test_steps_per_second": 28.716
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9730    0.9684    0.9707       633\n    Positive     0.8594    0.8871    0.8730       124\n    Negative     0.8710    0.8571    0.8640        63\n\n    accuracy                         0.9476       820\n   macro avg     0.9011    0.9042    0.9026       820\nweighted avg     0.9480    0.9476    0.9477       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9736    0.9605    0.9670      1266\n    Positive     0.8626    0.9113    0.8863       248\n    Negative     0.8527    0.8730    0.8627       126\n\n    accuracy                         0.9463      1640\n   macro avg     0.8963    0.9149    0.9053      1640\nweighted avg     0.9475    0.9463    0.9468      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.043106433004140854,
+            "test_Accuracy": 0.947560975609756,
+            "test_Precision_Macro": 0.901119538317119,
+            "test_Recall_Macro": 0.9042146849057108,
+            "test_F1_Macro": 0.9025735148110444,
+            "test_runtime": 0.797,
+            "test_samples_per_second": 1028.803,
+            "test_steps_per_second": 32.621
+        },
+        "test_metrics": {
+            "test_loss": 0.03512853384017944,
+            "test_Accuracy": 0.9463414634146341,
+            "test_Precision_Macro": 0.8962958204107915,
+            "test_Recall_Macro": 0.9149372416074755,
+            "test_F1_Macro": 0.9053392065905221,
+            "test_runtime": 1.7958,
+            "test_samples_per_second": 913.239,
+            "test_steps_per_second": 28.956
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9730    0.9684    0.9707       633\n    Positive     0.8594    0.8871    0.8730       124\n    Negative     0.8710    0.8571    0.8640        63\n\n    accuracy                         0.9476       820\n   macro avg     0.9011    0.9042    0.9026       820\nweighted avg     0.9480    0.9476    0.9477       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9736    0.9605    0.9670      1266\n    Positive     0.8626    0.9113    0.8863       248\n    Negative     0.8527    0.8730    0.8627       126\n\n    accuracy                         0.9463      1640\n   macro avg     0.8963    0.9149    0.9053      1640\nweighted avg     0.9475    0.9463    0.9468      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.043106433004140854,
+            "test_Accuracy": 0.947560975609756,
+            "test_Precision_Macro": 0.901119538317119,
+            "test_Recall_Macro": 0.9042146849057108,
+            "test_F1_Macro": 0.9025735148110444,
+            "test_runtime": 0.8762,
+            "test_samples_per_second": 935.846,
+            "test_steps_per_second": 29.673
+        },
+        "test_metrics": {
+            "test_loss": 0.03512853384017944,
+            "test_Accuracy": 0.9463414634146341,
+            "test_Precision_Macro": 0.8962958204107915,
+            "test_Recall_Macro": 0.9149372416074755,
+            "test_F1_Macro": 0.9053392065905221,
+            "test_runtime": 1.8042,
+            "test_samples_per_second": 909.007,
+            "test_steps_per_second": 28.822
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9759    0.9589    0.9673       633\n    Positive     0.8485    0.9032    0.8750       124\n    Negative     0.8182    0.8571    0.8372        63\n\n    accuracy                         0.9427       820\n   macro avg     0.8809    0.9064    0.8932       820\nweighted avg     0.9445    0.9427    0.9434       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9784    0.9645    0.9714      1266\n    Positive     0.8867    0.9153    0.9008       248\n    Negative     0.8529    0.9206    0.8855       126\n\n    accuracy                         0.9537      1640\n   macro avg     0.9060    0.9335    0.9192      1640\nweighted avg     0.9549    0.9537    0.9541      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.0374915711581707,
+            "test_Accuracy": 0.9426829268292682,
+            "test_Precision_Macro": 0.8808503036798857,
+            "test_Recall_Macro": 0.906431471329805,
+            "test_F1_Macro": 0.8931799932054728,
+            "test_runtime": 0.8301,
+            "test_samples_per_second": 987.795,
+            "test_steps_per_second": 31.32
+        },
+        "test_metrics": {
+            "test_loss": 0.032343100756406784,
+            "test_Accuracy": 0.9536585365853658,
+            "test_Precision_Macro": 0.9060084370286576,
+            "test_Recall_Macro": 0.9334708258611331,
+            "test_F1_Macro": 0.9192167386204443,
+            "test_runtime": 2.0314,
+            "test_samples_per_second": 807.334,
+            "test_steps_per_second": 25.598
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9759    0.9589    0.9673       633\n    Positive     0.8485    0.9032    0.8750       124\n    Negative     0.8182    0.8571    0.8372        63\n\n    accuracy                         0.9427       820\n   macro avg     0.8809    0.9064    0.8932       820\nweighted avg     0.9445    0.9427    0.9434       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9784    0.9645    0.9714      1266\n    Positive     0.8867    0.9153    0.9008       248\n    Negative     0.8529    0.9206    0.8855       126\n\n    accuracy                         0.9537      1640\n   macro avg     0.9060    0.9335    0.9192      1640\nweighted avg     0.9549    0.9537    0.9541      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.0374915711581707,
+            "test_Accuracy": 0.9426829268292682,
+            "test_Precision_Macro": 0.8808503036798857,
+            "test_Recall_Macro": 0.906431471329805,
+            "test_F1_Macro": 0.8931799932054728,
+            "test_runtime": 0.8765,
+            "test_samples_per_second": 935.497,
+            "test_steps_per_second": 29.662
+        },
+        "test_metrics": {
+            "test_loss": 0.032343100756406784,
+            "test_Accuracy": 0.9536585365853658,
+            "test_Precision_Macro": 0.9060084370286576,
+            "test_Recall_Macro": 0.9334708258611331,
+            "test_F1_Macro": 0.9192167386204443,
+            "test_runtime": 1.9906,
+            "test_samples_per_second": 823.864,
+            "test_steps_per_second": 26.123
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9713    0.9637    0.9675       633\n    Positive     0.8710    0.8710    0.8710       124\n    Negative     0.8235    0.8889    0.8550        63\n\n    accuracy                         0.9439       820\n   macro avg     0.8886    0.9078    0.8978       820\nweighted avg     0.9448    0.9439    0.9442       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9752    0.9621    0.9686      1266\n    Positive     0.8819    0.9032    0.8924       248\n    Negative     0.8467    0.9206    0.8821       126\n\n    accuracy                         0.9500      1640\n   macro avg     0.9013    0.9286    0.9144      1640\nweighted avg     0.9512    0.9500    0.9504      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.041481632739305496,
+            "test_Accuracy": 0.9439024390243902,
+            "test_Precision_Macro": 0.8886115777726747,
+            "test_Recall_Macro": 0.9078405725707362,
+            "test_F1_Macro": 0.8978052320406166,
+            "test_runtime": 0.8718,
+            "test_samples_per_second": 940.553,
+            "test_steps_per_second": 29.822
+        },
+        "test_metrics": {
+            "test_loss": 0.03241206333041191,
+            "test_Accuracy": 0.95,
+            "test_Precision_Macro": 0.901261745453991,
+            "test_Recall_Macro": 0.9286486783811352,
+            "test_F1_Macro": 0.9143826752119643,
+            "test_runtime": 1.9725,
+            "test_samples_per_second": 831.433,
+            "test_steps_per_second": 26.362
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9744    0.9637    0.9690       633\n    Positive     0.8538    0.8952    0.8740       124\n    Negative     0.8281    0.8413    0.8346        63\n\n    accuracy                         0.9439       820\n   macro avg     0.8855    0.9000    0.8926       820\nweighted avg     0.9450    0.9439    0.9443       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9688    0.9558    0.9622      1266\n    Positive     0.8488    0.8831    0.8656       248\n    Negative     0.7820    0.8254    0.8031       126\n\n    accuracy                         0.9348      1640\n   macro avg     0.8665    0.8881    0.8770      1640\nweighted avg     0.9363    0.9348    0.9354      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.04798810929059982,
+            "test_Accuracy": 0.9439024390243902,
+            "test_Precision_Macro": 0.885470682804948,
+            "test_Recall_Macro": 0.9000320728267526,
+            "test_F1_Macro": 0.8925614838256416,
+            "test_runtime": 0.8822,
+            "test_samples_per_second": 929.443,
+            "test_steps_per_second": 29.47
+        },
+        "test_metrics": {
+            "test_loss": 0.048657581210136414,
+            "test_Accuracy": 0.9347560975609757,
+            "test_Precision_Macro": 0.8665223721787946,
+            "test_Recall_Macro": 0.8880758447529583,
+            "test_F1_Macro": 0.8769760304897308,
+            "test_runtime": 2.036,
+            "test_samples_per_second": 805.511,
+            "test_steps_per_second": 25.541
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9587    0.9542    0.9565       633\n    Positive     0.8140    0.8468    0.8300       124\n    Negative     0.7869    0.7619    0.7742        63\n\n    accuracy                         0.9232       820\n   macro avg     0.8532    0.8543    0.8536       820\nweighted avg     0.9236    0.9232    0.9233       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9622    0.9660    0.9641      1266\n    Positive     0.8782    0.8427    0.8601       248\n    Negative     0.8321    0.8651    0.8482       126\n\n    accuracy                         0.9396      1640\n   macro avg     0.8908    0.8913    0.8908      1640\nweighted avg     0.9395    0.9396    0.9395      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.05944100394845009,
+            "test_Accuracy": 0.9231707317073171,
+            "test_Precision_Macro": 0.853189631001297,
+            "test_Recall_Macro": 0.8542884564517342,
+            "test_F1_Macro": 0.8535619880077908,
+            "test_runtime": 0.6582,
+            "test_samples_per_second": 1245.91,
+            "test_steps_per_second": 39.504
+        },
+        "test_metrics": {
+            "test_loss": 0.04391515254974365,
+            "test_Accuracy": 0.9396341463414634,
+            "test_Precision_Macro": 0.8908155967535932,
+            "test_Recall_Macro": 0.8912853518991725,
+            "test_F1_Macro": 0.8908207316627945,
+            "test_runtime": 2.0095,
+            "test_samples_per_second": 816.133,
+            "test_steps_per_second": 25.877
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9587    0.9542    0.9565       633\n    Positive     0.8140    0.8468    0.8300       124\n    Negative     0.7869    0.7619    0.7742        63\n\n    accuracy                         0.9232       820\n   macro avg     0.8532    0.8543    0.8536       820\nweighted avg     0.9236    0.9232    0.9233       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9622    0.9660    0.9641      1266\n    Positive     0.8782    0.8427    0.8601       248\n    Negative     0.8321    0.8651    0.8482       126\n\n    accuracy                         0.9396      1640\n   macro avg     0.8908    0.8913    0.8908      1640\nweighted avg     0.9395    0.9396    0.9395      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.05944100394845009,
+            "test_Accuracy": 0.9231707317073171,
+            "test_Precision_Macro": 0.853189631001297,
+            "test_Recall_Macro": 0.8542884564517342,
+            "test_F1_Macro": 0.8535619880077908,
+            "test_runtime": 0.6601,
+            "test_samples_per_second": 1242.258,
+            "test_steps_per_second": 39.389
+        },
+        "test_metrics": {
+            "test_loss": 0.04391515254974365,
+            "test_Accuracy": 0.9396341463414634,
+            "test_Precision_Macro": 0.8908155967535932,
+            "test_Recall_Macro": 0.8912853518991725,
+            "test_F1_Macro": 0.8908207316627945,
+            "test_runtime": 1.9893,
+            "test_samples_per_second": 824.416,
+            "test_steps_per_second": 26.14
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9728    0.9621    0.9674       633\n    Positive     0.8583    0.8790    0.8685       124\n    Negative     0.7910    0.8413    0.8154        63\n\n    accuracy                         0.9402       820\n   macro avg     0.8741    0.8941    0.8838       820\nweighted avg     0.9415    0.9402    0.9408       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9634    0.9558    0.9596      1266\n    Positive     0.8697    0.8347    0.8519       248\n    Negative     0.7877    0.9127    0.8456       126\n\n    accuracy                         0.9341      1640\n   macro avg     0.8736    0.9010    0.8857      1640\nweighted avg     0.9357    0.9341    0.9345      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.05913294851779938,
+            "test_Accuracy": 0.9402439024390243,
+            "test_Precision_Macro": 0.8740519810446897,
+            "test_Recall_Macro": 0.8941291357970765,
+            "test_F1_Macro": 0.8837816612006587,
+            "test_runtime": 1.8738,
+            "test_samples_per_second": 437.61,
+            "test_steps_per_second": 13.875
+        },
+        "test_metrics": {
+            "test_loss": 0.05232660099864006,
+            "test_Accuracy": 0.9341463414634147,
+            "test_Precision_Macro": 0.8735983094049068,
+            "test_Recall_Macro": 0.9010473415954229,
+            "test_F1_Macro": 0.8856653317184953,
+            "test_runtime": 6.0301,
+            "test_samples_per_second": 271.969,
+            "test_steps_per_second": 8.623
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9678    0.9494    0.9585       633\n    Positive     0.8030    0.8548    0.8281       124\n    Negative     0.7761    0.8254    0.8000        63\n\n    accuracy                         0.9256       820\n   macro avg     0.8490    0.8766    0.8622       820\nweighted avg     0.9282    0.9256    0.9266       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9720    0.9613    0.9666      1266\n    Positive     0.8617    0.8790    0.8703       248\n    Negative     0.8444    0.9048    0.8736       126\n\n    accuracy                         0.9445      1640\n   macro avg     0.8927    0.9150    0.9035      1640\nweighted avg     0.9455    0.9445    0.9449      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.07330726832151413,
+            "test_Accuracy": 0.925609756097561,
+            "test_Precision_Macro": 0.8489811956175789,
+            "test_Recall_Macro": 0.8765608708278024,
+            "test_F1_Macro": 0.8622192317916003,
+            "test_runtime": 1.2959,
+            "test_samples_per_second": 632.777,
+            "test_steps_per_second": 20.064
+        },
+        "test_metrics": {
+            "test_loss": 0.04467317461967468,
+            "test_Accuracy": 0.9445121951219512,
+            "test_Precision_Macro": 0.892716417310111,
+            "test_Recall_Macro": 0.9150298604892703,
+            "test_F1_Macro": 0.9034876300187369,
+            "test_runtime": 3.1673,
+            "test_samples_per_second": 517.794,
+            "test_steps_per_second": 16.418
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9618    0.9542    0.9580       633\n    Positive     0.8092    0.8548    0.8314       124\n    Negative     0.8033    0.7778    0.7903        63\n\n    accuracy                         0.9256       820\n   macro avg     0.8581    0.8623    0.8599       820\nweighted avg     0.9265    0.9256    0.9259       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9643    0.9589    0.9616      1266\n    Positive     0.8440    0.8508    0.8474       248\n    Negative     0.8321    0.8651    0.8482       126\n\n    accuracy                         0.9354      1640\n   macro avg     0.8801    0.8916    0.8857      1640\nweighted avg     0.9359    0.9354    0.9356      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.06500660628080368,
+            "test_Accuracy": 0.925609756097561,
+            "test_Precision_Macro": 0.8580741444528491,
+            "test_Recall_Macro": 0.8622676337857502,
+            "test_F1_Macro": 0.859888331617043,
+            "test_runtime": 0.8502,
+            "test_samples_per_second": 964.447,
+            "test_steps_per_second": 30.58
+        },
+        "test_metrics": {
+            "test_loss": 0.04685719683766365,
+            "test_Accuracy": 0.9353658536585366,
+            "test_Precision_Macro": 0.8801061386010546,
+            "test_Recall_Macro": 0.8916038556957376,
+            "test_F1_Macro": 0.8857409146287091,
+            "test_runtime": 1.8183,
+            "test_samples_per_second": 901.965,
+            "test_steps_per_second": 28.599
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9708    0.9463    0.9584       633\n    Positive     0.8074    0.8790    0.8417       124\n    Negative     0.7647    0.8254    0.7939        63\n\n    accuracy                         0.9268       820\n   macro avg     0.8476    0.8836    0.8647       820\nweighted avg     0.9303    0.9268    0.9281       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9687    0.9534    0.9610      1266\n    Positive     0.8340    0.8710    0.8521       248\n    Negative     0.8074    0.8651    0.8352       126\n\n    accuracy                         0.9341      1640\n   macro avg     0.8700    0.8965    0.8828      1640\nweighted avg     0.9359    0.9341    0.9349      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.06172826513648033,
+            "test_Accuracy": 0.926829268292683,
+            "test_Precision_Macro": 0.8476466233290844,
+            "test_Recall_Macro": 0.8835722010695255,
+            "test_F1_Macro": 0.8646639904899448,
+            "test_runtime": 1.1764,
+            "test_samples_per_second": 697.035,
+            "test_steps_per_second": 22.101
+        },
+        "test_metrics": {
+            "test_loss": 0.05199337750673294,
+            "test_Accuracy": 0.9341463414634147,
+            "test_Precision_Macro": 0.870028026956866,
+            "test_Recall_Macro": 0.8964812105004736,
+            "test_F1_Macro": 0.8827691030697502,
+            "test_runtime": 3.2077,
+            "test_samples_per_second": 511.272,
+            "test_steps_per_second": 16.211
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9422    0.9620    0.9520       763\n    Positive     0.7083    0.6145    0.6581        83\n    Negative     0.4348    0.3571    0.3922        28\n\n    accuracy                         0.9096       874\n   macro avg     0.6951    0.6445    0.6674       874\nweighted avg     0.9038    0.9096    0.9062       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9439    0.9476    0.9457      1526\n    Positive     0.5975    0.5723    0.5846       166\n    Negative     0.4737    0.4821    0.4779        56\n\n    accuracy                         0.8970      1748\n   macro avg     0.6717    0.6673    0.6694      1748\nweighted avg     0.8959    0.8970    0.8964      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.08556509017944336,
+            "test_Accuracy": 0.9096109839816934,
+            "test_Precision_Macro": 0.6951165249638768,
+            "test_Recall_Macro": 0.6445309415907404,
+            "test_F1_Macro": 0.6674105850030067,
+            "test_runtime": 1.8648,
+            "test_samples_per_second": 468.683,
+            "test_steps_per_second": 15.015
+        },
+        "test_metrics": {
+            "test_loss": 0.08283648639917374,
+            "test_Accuracy": 0.897025171624714,
+            "test_Precision_Macro": 0.6716775723402962,
+            "test_Recall_Macro": 0.6673357913962534,
+            "test_F1_Macro": 0.6694025483864409,
+            "test_runtime": 4.6974,
+            "test_samples_per_second": 372.124,
+            "test_steps_per_second": 11.709
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9286    0.9712    0.9494       763\n    Positive     0.7843    0.4819    0.5970        83\n    Negative     0.3600    0.3214    0.3396        28\n\n    accuracy                         0.9039       874\n   macro avg     0.6910    0.5915    0.6287       874\nweighted avg     0.8967    0.9039    0.8964       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9333    0.9633    0.9481      1526\n    Positive     0.6615    0.5181    0.5811       166\n    Negative     0.4419    0.3393    0.3838        56\n\n    accuracy                         0.9010      1748\n   macro avg     0.6789    0.6069    0.6377      1748\nweighted avg     0.8918    0.9010    0.8952      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.09538242220878601,
+            "test_Accuracy": 0.9038901601830663,
+            "test_Precision_Macro": 0.6909617180205415,
+            "test_Recall_Macro": 0.5915075768342045,
+            "test_F1_Macro": 0.6286763275472323,
+            "test_runtime": 1.0956,
+            "test_samples_per_second": 797.759,
+            "test_steps_per_second": 25.558
+        },
+        "test_metrics": {
+            "test_loss": 0.08176834136247635,
+            "test_Accuracy": 0.9010297482837528,
+            "test_Precision_Macro": 0.678910753329358,
+            "test_Recall_Macro": 0.6068869185786396,
+            "test_F1_Macro": 0.637666909675939,
+            "test_runtime": 2.6128,
+            "test_samples_per_second": 669.015,
+            "test_steps_per_second": 21.05
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9226    0.9685    0.9450       763\n    Positive     0.7059    0.4337    0.5373        83\n    Negative     0.4091    0.3214    0.3600        28\n\n    accuracy                         0.8970       874\n   macro avg     0.6792    0.5746    0.6141       874\nweighted avg     0.8856    0.8970    0.8876       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9262    0.9620    0.9437      1526\n    Positive     0.6303    0.4518    0.5263       166\n    Negative     0.3864    0.3036    0.3400        56\n\n    accuracy                         0.8924      1748\n   macro avg     0.6476    0.5725    0.6034      1748\nweighted avg     0.8808    0.8924    0.8848      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.08989813178777695,
+            "test_Accuracy": 0.897025171624714,
+            "test_Precision_Macro": 0.6791900053631713,
+            "test_Recall_Macro": 0.5745695758130819,
+            "test_F1_Macro": 0.6141087401865354,
+            "test_runtime": 1.2469,
+            "test_samples_per_second": 700.958,
+            "test_steps_per_second": 22.456
+        },
+        "test_metrics": {
+            "test_loss": 0.07962105423212051,
+            "test_Accuracy": 0.8924485125858124,
+            "test_Precision_Macro": 0.6475995675012189,
+            "test_Recall_Macro": 0.5724569312637181,
+            "test_F1_Macro": 0.603354593491121,
+            "test_runtime": 2.737,
+            "test_samples_per_second": 638.664,
+            "test_steps_per_second": 20.095
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9289    0.9594    0.9439       763\n    Positive     0.6721    0.4940    0.5694        83\n    Negative     0.3200    0.2857    0.3019        28\n\n    accuracy                         0.8936       874\n   macro avg     0.6404    0.5797    0.6051       874\nweighted avg     0.8850    0.8936    0.8878       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9386    0.9509    0.9447      1526\n    Positive     0.6327    0.5602    0.5942       166\n    Negative     0.4182    0.4107    0.4144        56\n\n    accuracy                         0.8965      1748\n   macro avg     0.6631    0.6406    0.6511      1748\nweighted avg     0.8928    0.8965    0.8944      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.09229542315006256,
+            "test_Accuracy": 0.8935926773455377,
+            "test_Precision_Macro": 0.6403550525644227,
+            "test_Recall_Macro": 0.5796870312179254,
+            "test_F1_Macro": 0.6050794645234628,
+            "test_runtime": 1.2766,
+            "test_samples_per_second": 684.605,
+            "test_steps_per_second": 21.932
+        },
+        "test_metrics": {
+            "test_loss": 0.07841628789901733,
+            "test_Accuracy": 0.8964530892448512,
+            "test_Precision_Macro": 0.6631286596727366,
+            "test_Recall_Macro": 0.6406023833209641,
+            "test_F1_Macro": 0.6511083580085677,
+            "test_runtime": 2.671,
+            "test_samples_per_second": 654.448,
+            "test_steps_per_second": 20.592
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9479    0.9541    0.9510       763\n    Positive     0.6711    0.6145    0.6415        83\n    Negative     0.3667    0.3929    0.3793        28\n\n    accuracy                         0.9039       874\n   macro avg     0.6619    0.6538    0.6573       874\nweighted avg     0.9030    0.9039    0.9033       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9505    0.9430    0.9467      1526\n    Positive     0.6077    0.6627    0.6340       166\n    Negative     0.4717    0.4464    0.4587        56\n\n    accuracy                         0.9005      1748\n   macro avg     0.6766    0.6840    0.6798      1748\nweighted avg     0.9026    0.9005    0.9014      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.08158239722251892,
+            "test_Accuracy": 0.9038901601830663,
+            "test_Precision_Macro": 0.6618786549707601,
+            "test_Recall_Macro": 0.6538144715164722,
+            "test_F1_Macro": 0.657277396326423,
+            "test_runtime": 1.8549,
+            "test_samples_per_second": 471.179,
+            "test_steps_per_second": 15.095
+        },
+        "test_metrics": {
+            "test_loss": 0.0720103308558464,
+            "test_Accuracy": 0.9004576659038902,
+            "test_Precision_Macro": 0.6766317570748118,
+            "test_Recall_Macro": 0.6840224594314348,
+            "test_F1_Macro": 0.6798106287782751,
+            "test_runtime": 4.7486,
+            "test_samples_per_second": 368.105,
+            "test_steps_per_second": 11.582
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9364    0.9646    0.9503       763\n    Positive     0.6667    0.5542    0.6053        83\n    Negative     0.3684    0.2500    0.2979        28\n\n    accuracy                         0.9027       874\n   macro avg     0.6572    0.5896    0.6178       874\nweighted avg     0.8926    0.9027    0.8966       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9371    0.9561    0.9465      1526\n    Positive     0.6383    0.5422    0.5863       166\n    Negative     0.4400    0.3929    0.4151        56\n\n    accuracy                         0.8987      1748\n   macro avg     0.6718    0.6304    0.6493      1748\nweighted avg     0.8928    0.8987    0.8953      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.08339395374059677,
+            "test_Accuracy": 0.902745995423341,
+            "test_Precision_Macro": 0.6571581625820276,
+            "test_Recall_Macro": 0.5896100785843242,
+            "test_F1_Macro": 0.6178086694422416,
+            "test_runtime": 1.0394,
+            "test_samples_per_second": 840.841,
+            "test_steps_per_second": 26.938
+        },
+        "test_metrics": {
+            "test_loss": 0.07178798317909241,
+            "test_Accuracy": 0.898741418764302,
+            "test_Precision_Macro": 0.6717854393564638,
+            "test_Recall_Macro": 0.630373393969061,
+            "test_F1_Macro": 0.6492980861599889,
+            "test_runtime": 2.6323,
+            "test_samples_per_second": 664.059,
+            "test_steps_per_second": 20.894
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9286    0.9712    0.9494       763\n    Positive     0.7843    0.4819    0.5970        83\n    Negative     0.3600    0.3214    0.3396        28\n\n    accuracy                         0.9039       874\n   macro avg     0.6910    0.5915    0.6287       874\nweighted avg     0.8967    0.9039    0.8964       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9333    0.9633    0.9481      1526\n    Positive     0.6615    0.5181    0.5811       166\n    Negative     0.4419    0.3393    0.3838        56\n\n    accuracy                         0.9010      1748\n   macro avg     0.6789    0.6069    0.6377      1748\nweighted avg     0.8918    0.9010    0.8952      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.09538242220878601,
+            "test_Accuracy": 0.9038901601830663,
+            "test_Precision_Macro": 0.6909617180205415,
+            "test_Recall_Macro": 0.5915075768342045,
+            "test_F1_Macro": 0.6286763275472323,
+            "test_runtime": 1.0937,
+            "test_samples_per_second": 799.115,
+            "test_steps_per_second": 25.601
+        },
+        "test_metrics": {
+            "test_loss": 0.08176834136247635,
+            "test_Accuracy": 0.9010297482837528,
+            "test_Precision_Macro": 0.678910753329358,
+            "test_Recall_Macro": 0.6068869185786396,
+            "test_F1_Macro": 0.637666909675939,
+            "test_runtime": 2.6265,
+            "test_samples_per_second": 665.535,
+            "test_steps_per_second": 20.941
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9373    0.9594    0.9482       763\n    Positive     0.6479    0.5542    0.5974        83\n    Negative     0.3636    0.2857    0.3200        28\n\n    accuracy                         0.8993       874\n   macro avg     0.6496    0.5998    0.6219       874\nweighted avg     0.8914    0.8993    0.8947       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9428    0.9509    0.9468      1526\n    Positive     0.6098    0.6024    0.6061       166\n    Negative     0.4000    0.3214    0.3564        56\n\n    accuracy                         0.8976      1748\n   macro avg     0.6509    0.6249    0.6364      1748\nweighted avg     0.8938    0.8976    0.8955      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.083092600107193,
+            "test_Accuracy": 0.8993135011441648,
+            "test_Precision_Macro": 0.6495945369184807,
+            "test_Recall_Macro": 0.5997673525030659,
+            "test_F1_Macro": 0.621863041966669,
+            "test_runtime": 1.0962,
+            "test_samples_per_second": 797.286,
+            "test_steps_per_second": 25.542
+        },
+        "test_metrics": {
+            "test_loss": 0.07758322358131409,
+            "test_Accuracy": 0.8975972540045767,
+            "test_Precision_Macro": 0.650858703518809,
+            "test_Recall_Macro": 0.6248967034586578,
+            "test_F1_Macro": 0.636438390984286,
+            "test_runtime": 2.6369,
+            "test_samples_per_second": 662.893,
+            "test_steps_per_second": 20.858
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9398    0.9620    0.9508       763\n    Positive     0.6806    0.5904    0.6323        83\n    Negative     0.4286    0.3214    0.3673        28\n\n    accuracy                         0.9062       874\n   macro avg     0.6830    0.6246    0.6501       874\nweighted avg     0.8988    0.9062    0.9018       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9390    0.9489    0.9439      1526\n    Positive     0.5915    0.5843    0.5879       166\n    Negative     0.4286    0.3214    0.3673        56\n\n    accuracy                         0.8942      1748\n   macro avg     0.6530    0.6182    0.6331      1748\nweighted avg     0.8897    0.8942    0.8917      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.08296757191419601,
+            "test_Accuracy": 0.9061784897025171,
+            "test_Precision_Macro": 0.6829825755882094,
+            "test_Recall_Macro": 0.6245940511719222,
+            "test_F1_Macro": 0.6501274017880593,
+            "test_runtime": 1.0955,
+            "test_samples_per_second": 797.829,
+            "test_steps_per_second": 25.56
+        },
+        "test_metrics": {
+            "test_loss": 0.07301798462867737,
+            "test_Accuracy": 0.8941647597254004,
+            "test_Precision_Macro": 0.6530250169094243,
+            "test_Recall_Macro": 0.618217299078358,
+            "test_F1_Macro": 0.6330543817226626,
+            "test_runtime": 2.6288,
+            "test_samples_per_second": 664.941,
+            "test_steps_per_second": 20.922
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9759    0.9589    0.9673       633\n    Positive     0.8485    0.9032    0.8750       124\n    Negative     0.8182    0.8571    0.8372        63\n\n    accuracy                         0.9427       820\n   macro avg     0.8809    0.9064    0.8932       820\nweighted avg     0.9445    0.9427    0.9434       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9784    0.9645    0.9714      1266\n    Positive     0.8867    0.9153    0.9008       248\n    Negative     0.8529    0.9206    0.8855       126\n\n    accuracy                         0.9537      1640\n   macro avg     0.9060    0.9335    0.9192      1640\nweighted avg     0.9549    0.9537    0.9541      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.0374915711581707,
+            "test_Accuracy": 0.9426829268292682,
+            "test_Precision_Macro": 0.8808503036798857,
+            "test_Recall_Macro": 0.906431471329805,
+            "test_F1_Macro": 0.8931799932054728,
+            "test_runtime": 0.6662,
+            "test_samples_per_second": 1230.827,
+            "test_steps_per_second": 39.026
+        },
+        "test_metrics": {
+            "test_loss": 0.032343100756406784,
+            "test_Accuracy": 0.9536585365853658,
+            "test_Precision_Macro": 0.9060084370286576,
+            "test_Recall_Macro": 0.9334708258611331,
+            "test_F1_Macro": 0.9192167386204443,
+            "test_runtime": 1.9699,
+            "test_samples_per_second": 832.544,
+            "test_steps_per_second": 26.398
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9714    0.9668    0.9691       633\n    Positive     0.8790    0.8790    0.8790       124\n    Negative     0.8636    0.9048    0.8837        63\n\n    accuracy                         0.9488       820\n   macro avg     0.9047    0.9169    0.9106       820\nweighted avg     0.9492    0.9488    0.9489       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9738    0.9700    0.9719      1266\n    Positive     0.9024    0.8952    0.8988       248\n    Negative     0.8722    0.9206    0.8958       126\n\n    accuracy                         0.9549      1640\n   macro avg     0.9161    0.9286    0.9221      1640\nweighted avg     0.9552    0.9549    0.9550      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.03585319221019745,
+            "test_Accuracy": 0.948780487804878,
+            "test_Precision_Macro": 0.9046990643764837,
+            "test_Recall_Macro": 0.9168729357920613,
+            "test_F1_Macro": 0.9106247761465308,
+            "test_runtime": 0.6683,
+            "test_samples_per_second": 1226.951,
+            "test_steps_per_second": 38.903
+        },
+        "test_metrics": {
+            "test_loss": 0.032001808285713196,
+            "test_Accuracy": 0.9548780487804878,
+            "test_Precision_Macro": 0.9161499229786619,
+            "test_Recall_Macro": 0.9285934710563972,
+            "test_F1_Macro": 0.9221472545572268,
+            "test_runtime": 1.9902,
+            "test_samples_per_second": 824.055,
+            "test_steps_per_second": 26.129
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9714    0.9668    0.9691       633\n    Positive     0.8790    0.8790    0.8790       124\n    Negative     0.8636    0.9048    0.8837        63\n\n    accuracy                         0.9488       820\n   macro avg     0.9047    0.9169    0.9106       820\nweighted avg     0.9492    0.9488    0.9489       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9738    0.9700    0.9719      1266\n    Positive     0.9024    0.8952    0.8988       248\n    Negative     0.8722    0.9206    0.8958       126\n\n    accuracy                         0.9549      1640\n   macro avg     0.9161    0.9286    0.9221      1640\nweighted avg     0.9552    0.9549    0.9550      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.03585319221019745,
+            "test_Accuracy": 0.948780487804878,
+            "test_Precision_Macro": 0.9046990643764837,
+            "test_Recall_Macro": 0.9168729357920613,
+            "test_F1_Macro": 0.9106247761465308,
+            "test_runtime": 0.6737,
+            "test_samples_per_second": 1217.099,
+            "test_steps_per_second": 38.591
+        },
+        "test_metrics": {
+            "test_loss": 0.032001808285713196,
+            "test_Accuracy": 0.9548780487804878,
+            "test_Precision_Macro": 0.9161499229786619,
+            "test_Recall_Macro": 0.9285934710563972,
+            "test_F1_Macro": 0.9221472545572268,
+            "test_runtime": 1.9818,
+            "test_samples_per_second": 827.532,
+            "test_steps_per_second": 26.239
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9316    0.9633    0.9472       763\n    Positive     0.6949    0.4940    0.5775        83\n    Negative     0.4231    0.3929    0.4074        28\n\n    accuracy                         0.9005       874\n   macro avg     0.6832    0.6167    0.6440       874\nweighted avg     0.8928    0.9005    0.8948       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9362    0.9522    0.9441      1526\n    Positive     0.5915    0.5060    0.5455       166\n    Negative     0.5000    0.4821    0.4909        56\n\n    accuracy                         0.8947      1748\n   macro avg     0.6759    0.6468    0.6602      1748\nweighted avg     0.8895    0.8947    0.8917      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.10669036209583282,
+            "test_Accuracy": 0.9004576659038902,
+            "test_Precision_Macro": 0.6831837042251426,
+            "test_Recall_Macro": 0.6167119329217262,
+            "test_F1_Macro": 0.6440123815311366,
+            "test_runtime": 10.0685,
+            "test_samples_per_second": 86.805,
+            "test_steps_per_second": 2.781
+        },
+        "test_metrics": {
+            "test_loss": 0.08323634415864944,
+            "test_Accuracy": 0.8947368421052632,
+            "test_Precision_Macro": 0.6759202119936112,
+            "test_Recall_Macro": 0.6467764899703664,
+            "test_F1_Macro": 0.6601610648394274,
+            "test_runtime": 14.8849,
+            "test_samples_per_second": 117.434,
+            "test_steps_per_second": 3.695
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9646    0.9479    0.9562       633\n    Positive     0.7895    0.8468    0.8171       124\n    Negative     0.8308    0.8571    0.8438        63\n\n    accuracy                         0.9256       820\n   macro avg     0.8616    0.8839    0.8723       820\nweighted avg     0.9279    0.9256    0.9265       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9681    0.9573    0.9627      1266\n    Positive     0.8930    0.8750    0.8839       248\n    Negative     0.7724    0.8889    0.8266       126\n\n    accuracy                         0.9396      1640\n   macro avg     0.8778    0.9071    0.8910      1640\nweighted avg     0.9417    0.9396    0.9403      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.06642250716686249,
+            "test_Accuracy": 0.925609756097561,
+            "test_Precision_Macro": 0.8616243800200477,
+            "test_Recall_Macro": 0.8839281164231477,
+            "test_F1_Macro": 0.8723486404576247,
+            "test_runtime": 2.507,
+            "test_samples_per_second": 327.089,
+            "test_steps_per_second": 10.371
+        },
+        "test_metrics": {
+            "test_loss": 0.050747912377119064,
+            "test_Accuracy": 0.9396341463414634,
+            "test_Precision_Macro": 0.8778230088468829,
+            "test_Recall_Macro": 0.9070782868176233,
+            "test_F1_Macro": 0.8910491457992783,
+            "test_runtime": 7.9664,
+            "test_samples_per_second": 205.866,
+            "test_steps_per_second": 6.527
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9625    0.9321    0.9470       633\n    Positive     0.7152    0.8710    0.7855       124\n    Negative     0.8571    0.7619    0.8067        63\n\n    accuracy                         0.9098       820\n   macro avg     0.8450    0.8550    0.8464       820\nweighted avg     0.9170    0.9098    0.9118       820\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9726    0.9265    0.9490      1266\n    Positive     0.7629    0.8952    0.8237       248\n    Negative     0.7273    0.8254    0.7732       126\n\n    accuracy                         0.9140      1640\n   macro avg     0.8209    0.8824    0.8487      1640\nweighted avg     0.9221    0.9140    0.9166      1640\n",
+        "eval_metrics": {
+            "test_loss": 0.07494155317544937,
+            "test_Accuracy": 0.9097560975609756,
+            "test_Precision_Macro": 0.8449514179017328,
+            "test_Recall_Macro": 0.8549806713696028,
+            "test_F1_Macro": 0.8464025773741571,
+            "test_runtime": 0.8198,
+            "test_samples_per_second": 1000.241,
+            "test_steps_per_second": 31.715
+        },
+        "test_metrics": {
+            "test_loss": 0.0639079138636589,
+            "test_Accuracy": 0.9140243902439025,
+            "test_Precision_Macro": 0.8209320470437564,
+            "test_Recall_Macro": 0.8823661333598652,
+            "test_F1_Macro": 0.8486703359492083,
+            "test_runtime": 2.3129,
+            "test_samples_per_second": 709.059,
+            "test_steps_per_second": 22.482
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9231    0.9751    0.9484       763\n    Positive     0.6610    0.4699    0.5493        83\n    Negative     0.3333    0.1071    0.1622        28\n\n    accuracy                         0.8993       874\n   macro avg     0.6391    0.5174    0.5533       874\nweighted avg     0.8793    0.8993    0.8853       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9261    0.9607    0.9431      1526\n    Positive     0.6148    0.5000    0.5515       166\n    Negative     0.4000    0.2143    0.2791        56\n\n    accuracy                         0.8930      1748\n   macro avg     0.6470    0.5583    0.5912      1748\nweighted avg     0.8797    0.8930    0.8846      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.09377481788396835,
+            "test_Accuracy": 0.8993135011441648,
+            "test_Precision_Macro": 0.6391424018542663,
+            "test_Recall_Macro": 0.51737355713812,
+            "test_F1_Macro": 0.5532775659347712,
+            "test_runtime": 1.4689,
+            "test_samples_per_second": 595.012,
+            "test_steps_per_second": 19.062
+        },
+        "test_metrics": {
+            "test_loss": 0.08615759760141373,
+            "test_Accuracy": 0.8930205949656751,
+            "test_Precision_Macro": 0.6469681726367345,
+            "test_Recall_Macro": 0.5583224115334207,
+            "test_F1_Macro": 0.5912110982761084,
+            "test_runtime": 3.1659,
+            "test_samples_per_second": 552.134,
+            "test_steps_per_second": 17.373
+        }
+    },
+    {
+        "validation_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9337    0.9594    0.9463       763\n    Positive     0.7193    0.4940    0.5857        83\n    Negative     0.4545    0.5357    0.4918        28\n\n    accuracy                         0.9016       874\n   macro avg     0.7025    0.6630    0.6746       874\nweighted avg     0.8980    0.9016    0.8975       874\n",
+        "test_report": "              precision    recall  f1-score   support\n\n     Neutral     0.9348    0.9587    0.9466      1526\n    Positive     0.6418    0.5181    0.5733       166\n    Negative     0.4898    0.4286    0.4571        56\n\n    accuracy                         0.8999      1748\n   macro avg     0.6888    0.6351    0.6590      1748\nweighted avg     0.8927    0.8999    0.8955      1748\n",
+        "eval_metrics": {
+            "test_loss": 0.08613279461860657,
+            "test_Accuracy": 0.9016018306636155,
+            "test_Precision_Macro": 0.7025057231824149,
+            "test_Recall_Macro": 0.6630203645512588,
+            "test_F1_Macro": 0.6746217780933307,
+            "test_runtime": 4.3038,
+            "test_samples_per_second": 203.077,
+            "test_steps_per_second": 6.506
+        },
+        "test_metrics": {
+            "test_loss": 0.0729595273733139,
+            "test_Accuracy": 0.8998855835240275,
+            "test_Precision_Macro": 0.6888037480978754,
+            "test_Recall_Macro": 0.6351197713527769,
+            "test_F1_Macro": 0.659031802519347,
+            "test_runtime": 10.1587,
+            "test_samples_per_second": 172.068,
+            "test_steps_per_second": 5.414
+        }
     }
 ]

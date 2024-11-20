@@ -38,68 +38,79 @@ deepseek_url = "https://api.deepseek.com/v1"
 deepseek_model = "deepseek-chat"
 deepbricks_api = "sk-ybgZNYqegwDjhGRDZKIHOYoYQLWTCSLh52Qbv0uF81J0U3n0"
 deepbricks_url = "https://api.deepbricks.ai/v1/"
-deepbricks_model = "GPT-4o-2024-08-06"
+deepbricks_model = "gpt-3.5-turbo"
 
 
 def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device, with_api=False):
+
+    nvidia_api = api_key_2
     system_prompt = '''
-        You are an AI assistant specialized in analyzing scientific citations and extracting aspect sentiment quadruples according to the following elements definition:
+            You are an AI assistant specialized in analyzing neutral scientific citations and extracting aspect sentiment quadruples. Your primary focus is on objective, descriptive statements in academic writing, while remaining sensitive to subtle evaluative elements. Follow these guidelines:
 
-        -An "aspect term" refers to a specific contribution, method, finding, or component of the cited work that appears explicitly as a substring in the citation text
-        -An "opinion term" refers to the evaluation or assessment expressed towards a particular aspect of the cited work, appearing explicitly as a substring in the citation text
-        -The "aspect category" indicates the broad category that the aspect term belongs to, chosen from a predefined set:
-            * METHODOLOGY (methods, algorithms, techniques, frameworks, or approaches)
-            * PERFORMANCE (results, efficiency, accuracy, effectiveness, or any measurable outcomes)
-            * INNOVATION (novelty, contributions, or advances in the field)
-            * APPLICABILITY (practical value, usefulness, or real-world applications)
-            * LIMITATION (drawbacks, constraints, weaknesses, or problems)
-        -The "sentiment polarity" indicates the author's attitude towards the cited aspect: "positive" or "negative"
+            Element Definitions:
+            -An "aspect term" refers to:
+                * Methods, tools, or systems being used
+                * Datasets or corpora
+                * Experimental settings
+                * Technical components or parameters
+                * Metrics or measurements
 
-        Extraction Guidelines:
-        1. Only extract up to 2 sentiment quadruples per citation.
-        2. Language Patterns:
-            Aspects: noun phrases, technical terms, research components
-            Opinions: adjectives, verb phrases, adverb-adjective pairs
-        3. Ensure the aspect and opinion are explicitly mentioned in the text.
-        4. Aspect category must be one of the predefined categories, verify aspect-category alignment based on definitions.
-        5. Sentiment polarity must be either "positive" or "negative", consider academic context for polarity judgment.
-        6. Ignore purely objective statements without evaluative content.
+            -An "opinion term" in neutral scientific writing typically appears as:
+                * Technical descriptions (e.g., "is defined as", "consists of", "is specified by")
+                * Process descriptions (e.g., "was trained on", "was evaluated using")
+                * Quantitative statements (e.g., "contains X components", "uses Y parameters")
+                * Comparative descriptions (e.g., "differs from", "is similar to")
 
-        Examples:
-        Text: Substantial improvements have been made to parse western language such as English, and many powerful models have been proposed.
-        Sentiment Quadruples:
-        [("improvements", "substantial", "PERFORMANCE", "positive", 0.95), ("models", "powerful", "METHODOLOGY", "positive", 0.92)]
+            -The "aspect category" remains:
+                * METHODOLOGY (methods, algorithms, techniques, approaches)
+                * PERFORMANCE (results, metrics, measurements)
+                * INNOVATION (novel aspects, contributions)
+                * APPLICABILITY (use cases, applications)
+                * LIMITATION (constraints, requirements)
 
-        Text: However, one of the major limitations of these advances is the structured syntactic knowledge, which is important to global reordering, has not been well exploited.
-        Sentiment Quadruples:
-        [("structured syntactic knowledge", "has not been well exploited", "LIMITATION", "negative", 0.90), ("syntactic knowledge", "important", "METHODOLOGY", "positive", 0.88)]
+            -The "sentiment polarity" can be:
+                * "neutral" - For purely descriptive statements about methods, data, or processes
+                * "positive" - When implicit positive evaluation exists (e.g., "standard dataset", "widely used method")
+                * "negative" - When implicit negative evaluation exists (e.g., "requires substantial resources")
 
-        Special Cases to Consider:
-        1. Implicit Opinions:
-        When opinions are implied through comparison:
-        "Their method performs better than baseline approaches."
-        Sentiment Quadruples:
-        [("method", "performs better", "PERFORMANCE", "positive", 0.93)]
+            Special Attention Points:
+            1. Default to Neutral for:
+               - Pure technical descriptions
+               - Experimental setup details
+               - Data processing steps
+               - System components description
 
-        2. Compound Aspects:
-        When multiple aspects are mentioned together:
-        "The model architecture and training strategy are innovative."
-        Sentiment Quadruples:
-        [("model architecture", "innovative", "INNOVATION", "positive", 0.91), ("training strategy", "innovative", "INNOVATION", "positive", 0.91)]
+            2. Look for Hidden Sentiment in:
+               - Terms implying authority ("standard", "widely-used", "established")
+               - Scale indicators ("large-scale", "extensive", "comprehensive")
+               - Efficiency markers ("efficient", "fast", "lightweight")
+               - Resource requirements ("requires", "needs", "demands")
 
-        3. Context-Dependent Polarity:
-        Consider academic writing context:
-        "This simple approach..." could be positive (elegance) or negative (oversimplified) depending on context.
+            3. Context Considerations:
+               - Academic writing often uses understated language
+               - Technical superiority might be implied through comparison
+               - Resource requirements might imply limitations
+               - Implementation details might suggest complexity
+            
+            Examples:
+            Text: "To tackle this problem, we defined 2The best results of Collins and Roark are achieved when the parser utilizes the information about the final punctuation and the look-ahead."
+            Quadruples: [("parser", "utilizes information about final punctuation and look-ahead", "METHODOLOGY", "neutral", 0.9), ("results", "best when utilizing information", "PERFORMANCE", "positive", 0.85)]
+    
+            Text: "In the second pass, 5-gram and 6-gram zero-cutoff stupid-backoff language models estimated using 4.7 billion words of English newswire text are used to generate lattices for phrasal segmentation model rescoring."
+            Quadruples: [("language models", "5-gram and 6-gram zero-cutoff stupid-backoff", "METHODOLOGY", "neutral", 0.95)]
+    
+            Text: "In this paper, we give an overview of NLPWin, a multi-application natural language analysis and generation system under development at Microsoft Research, incorporating analysis systems for 7 languages."
+            Quadruples: [("NLPWin", "multi-application natural language analysis and generation system", "METHODOLOGY", "neutral", 0.95), ("analysis systems", "incorporating 7 languages", "APPLICABILITY", "positive", 0.85)]
         '''
 
     user_prompt = f'''
-        Analyze the sentiment elements in this scientific citation text. Provide exactly up to 2 quadruples containing (aspect term, opinion term, aspect category, sentiment polarity, confidence score) for the following citation:
+        Analyze this scientific citation that has been labeled as having neutral overall sentiment. Extract up to 2 sentiment quadruples, paying special attention to both purely descriptive elements and any subtle evaluative content that might be present:
 
         Text: {text}
         Overall Sentiment: {sentiment}
 
-        Provide your response in the format of a Python list of tuples:
-        Sentiment elements: [("aspect term", "opinion term", "aspect category", "sentiment polarity", confidence score), ("aspect term", "opinion term", "aspect category", "sentiment polarity", confidence score)]
+        Provide your response strictly as a Python list of tuples:
+        [("aspect term", "opinion term", "aspect category", "sentiment polarity", confidence score), ("aspect term", "opinion term", "aspect category", "sentiment polarity", confidence score)]
 
         Only include the list of quadruples in your response, with no additional text.
         '''
@@ -110,11 +121,11 @@ def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device, with
 
     if with_api:
         client = OpenAI(
-            base_url=deepbricks_url,
-            api_key=deepbricks_api
+            base_url=nvidia_url,
+            api_key=nvidia_api
         )
         response = client.chat.completions.create(
-            model=deepbricks_model,
+            model=nvidia_model,
             messages=messages,
             max_tokens=128,
             temperature=0.7,
@@ -122,8 +133,6 @@ def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device, with
             stream=False,
         )
         response = response.choices[0].message.content
-        response = response.strip('`python\n')
-        response = response.strip('`\n')
         print(response)
     else:
         input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -157,6 +166,13 @@ def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device, with
 
 # 算是chain of thoughts模式
 def verify_quadruples_quality(text, quadruples, tokenizer, model, device, with_api=False):
+
+    global api_call_count
+    if api_call_count < max_api_calls:
+        nvidia_api = api_key_1
+    else:
+        nvidia_api = api_key_2
+    api_call_count += 1
 
     system_prompt = '''You are a critical quadruple verification system for scientific citations. Your role is to analyze quadruples through step-by-step reasoning and provide structured validation results.
 
@@ -389,7 +405,7 @@ def process_dataset(file_path, tokenizer, model, device, checkpoint_dir=None):
     label_map = {0: 'neutral', 1: 'positive', 2: 'negative'}
     labels = [label_map[label] for label in labels]
     df = pd.DataFrame({'Citation_Text': sentences, 'Sentiment': labels})
-    df = df[df['Sentiment'].isin(['positive', 'negative'])]
+    df = df[df['Sentiment'].isin(['neutral'])]
     # df = df.head(5) # 测试用
 
     max_retries = 3
@@ -408,7 +424,7 @@ def process_dataset(file_path, tokenizer, model, device, checkpoint_dir=None):
                                                               tokenizer,
                                                               model,
                                                               device,
-                                                              with_api=True)
+                                                              with_api=False)
                     results.append({
                         'text': item['Citation_Text'],
                         'overall_sentiment': item['Sentiment'],
@@ -498,7 +514,7 @@ def process_dataset_with_verification(file_path, extractor_model, verifier_model
                         tokenizer,
                         verifier_model,
                         device,
-                        with_api=True
+                        with_api=False
                     )
 
                     # Process verification results
@@ -611,41 +627,41 @@ def main():
     seed_everything(seed)
 
     file_path = '../data/citation_sentiment_corpus_expand.csv'
-    initial_output_dir = '../output/sentiment_asqp_results_corpus_expand_llama3b.json'
-    final_output_dir = '../output/sentiment_asqp_results_corpus_expand_verified_deepseek.json'
+    initial_output_dir = '../output/sentiment_asqp_results_corpus_expand_llama8b_neutral.json'
+    final_output_dir = '../output/sentiment_asqp_results_corpus_expand_verified_llama.json'
     extractor_model_name = 'Meta-Llama-3-8B-Instruct'
     verifier_model_name = 'Meta-Llama-3.1-8B-Instruct'
     device = 'cuda:0'
 
     tokenizer = AutoTokenizer.from_pretrained(f'../pretrain_models/{extractor_model_name}')
-    # extractor_model = AutoModelForCausalLM.from_pretrained(
-    #     f'../pretrain_models/{extractor_model_name}',
-    #     torch_dtype=torch.bfloat16,
-    #     attn_implementation='flash_attention_2',
-    #     device_map=device
-    # )
-    extractor_model = None #不加载到显存里面
+    extractor_model = AutoModelForCausalLM.from_pretrained(
+        f'../pretrain_models/{extractor_model_name}',
+        torch_dtype=torch.bfloat16,
+        attn_implementation='flash_attention_2',
+        device_map=device
+    )
+    # extractor_model = None #不加载到显存里面
     # verifier_model = AutoModelForCausalLM.from_pretrained(
     #     f'../pretrain_models/{verifier_model_name}',
     #     torch_dtype=torch.bfloat16,
     #     attn_implementation='flash_attention_2',
     #     device_map=device
     # )
-    verifier_model = None
+    # verifier_model = None
 
-    # initial_results = process_dataset(file_path, tokenizer, extractor_model, device)
-    # save_results(initial_results, initial_output_dir)
+    initial_results = process_dataset(file_path, tokenizer, extractor_model, device)
+    save_results(initial_results, initial_output_dir)
 
-    results, quality_metrics = process_dataset_with_verification(
-        file_path,
-        extractor_model,
-        verifier_model,
-        tokenizer,
-        device,
-        initial_output_dir,
-        final_output_dir,
-    )
-    print("Quality metrics:", quality_metrics)
+    # results, quality_metrics = process_dataset_with_verification(
+    #     file_path,
+    #     extractor_model,
+    #     verifier_model,
+    #     tokenizer,
+    #     device,
+    #     initial_output_dir,
+    #     final_output_dir,
+    # )
+    # print("Quality metrics:", quality_metrics)
 
     # 'average_confidence': 0.8289524599226354,
     # 'total_original_quadruples': 3618,

@@ -19933,13 +19933,13 @@
       [
         "view",
         "wrongheaded",
-        "OPINION",
+        "LIMITATION",
         "negative"
       ],
       [
         "view",
         "unfounded",
-        "OPINION",
+        "LIMITATION",
         "negative"
       ]
     ],
@@ -19990,13 +19990,13 @@
       [
         "view",
         "misguided",
-        "OPINION",
+        "LIMITATION",
         "negative"
       ],
       [
         "view",
         "unsubstantiated",
-        "OPINION",
+        "LIMITATION",
         "negative"
       ]
     ]
@@ -89378,7 +89378,7 @@
           "correction": [
             "problem",
             "pose a challenge",
-            "GENERAL ISSUE",
+            "LIMITATION",
             "neutral"
           ]
         }
@@ -89395,7 +89395,7 @@
       [
         "problem",
         "pose a challenge",
-        "GENERAL ISSUE",
+        "LIMITATION",
         "neutral"
       ]
     ]

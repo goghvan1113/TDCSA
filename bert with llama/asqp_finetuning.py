@@ -28,8 +28,7 @@ CATEGORY2ID = {
     'PERFORMANCE': 1,
     'INNOVATION': 2,
     'APPLICABILITY': 3,
-    'LIMITATION': 4,
-    'COMPARISON': 5
+    'LIMITATION': 4
 }
 ID2CATEGORY = {v: k for k, v in CATEGORY2ID.items()}
 
@@ -365,7 +364,7 @@ def load_acos_data_verified(quad_file=None, corpus_file=None):
             pos_neg_samples.append({
                 'text': item['text'],
                 'overall_sentiment': item['overall_sentiment'],
-                'quads': item['final_quadruples']  # 加载verified的四元组
+                'quads': item['sentiment_quadruples']  # 加载verified的四元组
             })
 
     # 加载中性样本
@@ -566,7 +565,7 @@ def evaluate_model(model, dataset):
 
 def main(args):
     # Load data and prepare datasets
-    quad_file = f'../output/sentiment_asqp_results_corpus_expand_verified.json'
+    quad_file = f'../output/sentiment_asqp_results_corpus_expand_llama.json'
     corpus_file = '../data/citation_sentiment_corpus_expand.csv'
     pos_neg_samples, neutral_samples = load_acos_data_verified(quad_file, corpus_file)
 
@@ -602,8 +601,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="scibert_scivocab_uncased")
     parser.add_argument("--epochs", type=int, default=5)
-    parser.add_argument("--batch_size", type=int, default=8)
-    parser.add_argument("--learning_rate", type=float, default=1e-5)
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--learning_rate", type=float, default=5e-5)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args()

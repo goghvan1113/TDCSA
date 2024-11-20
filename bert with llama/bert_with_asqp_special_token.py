@@ -6,7 +6,7 @@ from collections import Counter
 from datetime import datetime
 
 from matplotlib import pyplot as plt
-from sklearn.metrics import precision_recall_fscore_support, accuracy_score, classification_report
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score, classification_report, f1_score
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from transformers import AutoConfig, PreTrainedModel, AutoModel, Trainer, PretrainedConfig, AutoTokenizer, \
@@ -64,6 +64,58 @@ class QuadAspectEnhancedBertConfig(PretrainedConfig):
         self.num_categories = num_categories
 
 
+class HierarchicalAttention(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.token_attention = nn.MultiheadAttention(
+            embed_dim=config.hidden_size,
+            num_heads=8,
+            dropout=config.hidden_dropout_prob,
+            batch_first=True
+        )
+
+        self.sent_attention = nn.MultiheadAttention(
+            embed_dim=config.hidden_size,
+            num_heads=8,
+            dropout=config.hidden_dropout_prob,
+            batch_first=True
+        )
+
+        self.aspect_specific_layer = nn.ModuleDict({
+            'method': nn.Linear(config.hidden_size, config.hidden_size),
+            'result': nn.Linear(config.hidden_size, config.hidden_size),
+            'contribution': nn.Linear(config.hidden_size, config.hidden_size)
+        })
+
+    def forward(self, text_hidden, quad_hidden, attention_mask, quad_attention_mask):
+        # Token-level attention
+        token_attn_output, _ = self.token_attention(
+            query=text_hidden,
+            key=quad_hidden,
+            value=quad_hidden,
+            key_padding_mask=~quad_attention_mask.bool()
+        )
+
+        # 根据特殊token分离不同视角的特征
+        method_mask = (quad_hidden == self.token_to_id('[METHOD]')).float()
+        result_mask = (quad_hidden == self.token_to_id('[RESULT]')).float()
+        contribution_mask = (quad_hidden == self.token_to_id('[CONTRIBUTION]')).float()
+
+        # Aspect-specific representation
+        method_repr = self.aspect_specific_layer['method'](token_attn_output * method_mask)
+        result_repr = self.aspect_specific_layer['result'](token_attn_output * result_mask)
+        contribution_repr = self.aspect_specific_layer['contribution'](token_attn_output * contribution_mask)
+
+        # Sentence-level attention
+        combined_repr = torch.stack([method_repr, result_repr, contribution_repr], dim=1)
+        sent_attn_output, _ = self.sent_attention(
+            query=combined_repr,
+            key=combined_repr,
+            value=combined_repr
+        )
+
+        return sent_attn_output
+
 class NonLinearFusion(nn.Module):
     def __init__(self, hidden_size, dropout_prob):
         super().__init__()
@@ -90,8 +142,20 @@ class NonLinearFusion(nn.Module):
             nn.Linear(hidden_size * 4, hidden_size * 3),
             nn.LayerNorm(hidden_size * 3)
         )
+        # 添加aspect-aware gates
+        self.aspect_gates = nn.ModuleDict({
+            'method': nn.Linear(hidden_size, hidden_size),
+            'result': nn.Linear(hidden_size, hidden_size),
+            'contribution': nn.Linear(hidden_size, hidden_size)
+        })
 
-    def forward(self, text_features, quad_features, attn_features):
+        # 添加表达方式aware gates
+        self.expression_gates = nn.ModuleDict({
+            'explicit': nn.Linear(hidden_size, hidden_size),
+            'implicit': nn.Linear(hidden_size, hidden_size)
+        })
+
+    def forward(self, text_features, quad_features, hier_attn_features):
         # 计算门控权重
         text_gate = torch.sigmoid(self.gate_text(text_features))
         quad_gate = torch.sigmoid(self.gate_quad(quad_features))
@@ -112,36 +176,40 @@ class NonLinearFusion(nn.Module):
         normalized = self.layer_norm(combined)
         fused = self.fusion_layer(normalized)
 
-        return fused
+        # 添加aspect-aware fusion
+        aspect_weights = {
+            aspect: torch.sigmoid(gate(hier_attn_features))
+            for aspect, gate in self.aspect_gates.items()
+        }
+
+        aspect_fusion = sum(weight * features
+                            for weight, features in zip(aspect_weights.values(),
+                                                        [text_features, quad_features, hier_attn_features]))
+
+        # 最终融合
+        final_fusion = self.fusion_layer(
+            torch.cat([
+                fused,  # 原有的融合结果
+                aspect_fusion  # 新增的aspect-aware融合结果
+            ], dim=-1)
+        )
+
+        return final_fusion
+
 
 class QuadAspectEnhancedBertModel(PreTrainedModel):
     config_class = QuadAspectEnhancedBertConfig
     def __init__(self, config: QuadAspectEnhancedBertConfig):
         super().__init__(config)
-
+        
         # 基础编码器
         self.bert = AutoModel.from_pretrained(f'../pretrain_models/{config.backbone_model}')
         self.quad_bert = AutoModel.from_pretrained(f'../pretrain_models/{config.backbone_model}')
-
+        
         hidden_size = config.hidden_size
-
+        
         # 类别感知层
         self.category_embedding = nn.Embedding(config.num_categories, hidden_size)
-
-        # 交互注意力层
-        self.cross_attention = nn.MultiheadAttention(
-            embed_dim=hidden_size,
-            num_heads=8,
-            dropout=config.hidden_dropout_prob,
-            batch_first=True,
-        )
-        # 自注意力层 - 增强特征提取
-        self.self_attention = nn.MultiheadAttention(
-            embed_dim=hidden_size,
-            num_heads=8,
-            dropout=config.hidden_dropout_prob,
-            batch_first=True
-        )
 
         # 特征转换层
         self.text_transform = nn.Sequential(
@@ -157,19 +225,22 @@ class QuadAspectEnhancedBertModel(PreTrainedModel):
             nn.Dropout(config.hidden_dropout_prob)
         )
         # 融合层
+        # 替换原有的attention层为hierarchical attention
+        self.hierarchical_attention = HierarchicalAttention(config)
+
         self.fusion = NonLinearFusion(hidden_size, config.hidden_dropout_prob)
 
         # 分类器
         self.classifier = nn.Linear(hidden_size * 3, config.num_labels)
         # 情感检测器
         self.sentiment_detector = nn.Linear(hidden_size, 2)
-
+        
         self.init_weights()
 
     def forward(
             self,
             input_ids=None,
-            attention_mask=None,
+            attention_mask=None, 
             quad_input_ids=None,
             quad_attention_mask=None,
             category_ids=None,
@@ -180,39 +251,36 @@ class QuadAspectEnhancedBertModel(PreTrainedModel):
         text_outputs = self.bert(input_ids, attention_mask)
         text_hidden = text_outputs.last_hidden_state
         text_pooled = text_outputs.pooler_output
-
+        
         # 四元组编码
         quad_outputs = self.quad_bert(quad_input_ids, quad_attention_mask)
         quad_hidden = quad_outputs.last_hidden_state
         quad_pooled = quad_outputs.pooler_output
-
+        
         # 类别增强
         if category_ids is not None:
             category_embeds = self.category_embedding(category_ids)
             quad_hidden = quad_hidden + category_embeds.unsqueeze(1)
-
+            
         # 特征转换
         text_transformed = self.text_transform(text_hidden)
         quad_transformed = self.quad_transform(quad_hidden)
 
-        # 交互注意力
-        cross_attn_output, _ = self.cross_attention(
-            query=text_transformed,
-            key=quad_transformed,
-            value=quad_transformed,
-            key_padding_mask=~quad_attention_mask.bool()
+        # 使用分层注意力
+        hier_attn_output = self.hierarchical_attention(
+            text_hidden,
+            quad_hidden,
+            attention_mask,
+            quad_attention_mask
         )
-        self_attn_output, _ = self.self_attention(
-            query=cross_attn_output,
-            key=cross_attn_output,
-            value=cross_attn_output,
-            key_padding_mask=~attention_mask.bool()
+
+        # 使用增强的融合层
+        fused = self.fusion(
+            text_pooled,
+            quad_pooled,
+            hier_attn_output
         )
-        attn_pooled = torch.mean(self_attn_output, dim=1)
-
-        # 特征融合
-        fused = self.fusion(text_pooled, quad_pooled, attn_pooled)
-
+        
         # 分类预测
         logits = self.classifier(fused)
         logits_probs = torch.softmax(logits, dim=-1)
@@ -229,7 +297,7 @@ class QuadAspectEnhancedBertModel(PreTrainedModel):
 
         # 转换回logits形式
         refined_logits = torch.log(refined_logits + 1e-10)
-
+        
         return {
             'logits': refined_logits if self.config.multitask else logits, # 这个指标才是影响混淆矩阵最左边一列的数据
             'sentiment_logits': sentiment_logits,
@@ -324,7 +392,6 @@ class QuadAspectDataProcessor:
         category_ids = []
         for feature in features:
             if feature.get('label', 0) == 0:  # Neutral sample
-                # method = random.choice(['random_mask', 'random_polar', 'random_words'])
                 if method == 'empty':
                     quad_text = ''
                     category_id = 0
@@ -397,32 +464,20 @@ class QuadAspectDataProcessor:
                 quad_parts = []
                 feature_categories = []
                 for aspect, opinion, category, polarity, confidence in quads:
-                    quad_parts.append(f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category")
-                    # quad_parts.append("This citation expresses [MASK] sentiment towards [ASPECT] through [OPINION] which belongs to [CATEGORY] category")
-                    # quad_parts.append(f"{aspect} is {opinion} in [[MASK]] {category}")
-                    quad_parts.append(" [SEP] ")
+                    # 判断评价视角
+                    view_token = self._get_view_token(aspect, category)
+                    # 判断表达方式
+                    expr_token = self._get_expression_token(opinion)
+
+                    quad_parts.append(
+                        f"{view_token} {expr_token} "
+                        f"[ASP]{aspect}[/ASP] "
+                        f"[OPN]{opinion}[/OPN] "
+                        f"[CAT]{category}[/CAT]"
+                    )
                     feature_categories.append(category)
                 quad_text = " ; ".join(quad_parts)
-                # 使用最常见的类别作为该样本的主类别
-                if feature_categories:
-                    most_common_category = max(set(feature_categories),
-                                            key=feature_categories.count)
-                    category_id = self.category2id.get(most_common_category, 0)
-                else:
-                    category_id = 0
-
-                # # 下面代码是随机在中性文本中选择四元组
-                # text_tokens = feature.get('text', '').split()
-                # if len(text_tokens) >= 2:
-                #     aspect = random.choice(text_tokens)
-                #     opinion = random.choice(text_tokens)
-                # else:
-                #     aspect = 'aspect'
-                #     opinion = 'opinion'
-                # category = random.choice(list(self.category2id.keys()))
-                # quad_text = f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category"
-                # category_id = self.category2id.get(category, 0)
-
+            
             quad_texts.append(quad_text)
             category_ids.append(category_id)
 
@@ -443,6 +498,22 @@ class QuadAspectDataProcessor:
             "labels": torch.tensor(labels),
             "sentiment_labels": torch.tensor(sentiment_labels)
         }
+
+    def _get_view_token(self, aspect: str, category: str) -> str:
+        """根据aspect和category判断评价视角"""
+        if category == 'METHODOLOGY':
+            return '[METHOD]'
+        elif category == 'PERFORMANCE':
+            return '[RESULT]'
+        elif category == 'INNOVATION':
+            return '[CONTRIBUTION]'
+        return '[GENERAL]'
+
+    def _get_expression_token(self, opinion: str) -> str:
+        """根据opinion判断表达方式"""
+        # 这里可以构建一个显式/隐式表达的词典
+        explicit_words = {'improve', 'outperform', 'better', 'worse', ...}
+        return '[EXPLICIT]' if any(word in opinion.lower() for word in explicit_words) else '[IMPLICIT]'
 
 
 class AspectAwareDataset(torch.utils.data.Dataset):
@@ -787,7 +858,7 @@ class ModelEvaluator:
             digits=4
         )
 
-        conf_matrix = plot_confusion_matrix(all_labels, all_preds, ['neutral', 'positive', 'negative'])
+        conf_matrix = plot_confusion_matrix(all_labels, all_preds, ['neutral', 'positive','negative'])
 
         return {
             'classification_report': report,
@@ -878,17 +949,16 @@ def train_asqp_model(args, train_data, eval_data):
         focal_alpha=0.8,
         focal_gamma=2.0,
         label_smoothing=0.0,
-        multitask=True,
+        multitask=False,
         backbone_model=args.model_name,
         num_categories=5 # 类别数量
     )
 
-    from ablation_study import (SimpleConcat, WithoutCrossAttention, FourFusionModel,
+    from ablation_study import (SimpleConcat, WithoutCrossAttention,
                                 WithoutNonLinearFusion, BaseTextOnlyModel, SingleBertEncoder,
-                                TextAttentionFusion, QuadOnlyModel, CrossAttentionOnlyModel,
-                                AttentionVariant)
+                                TextAttentionFusion, QuadOnlyModel, CrossAttentionOnlyModel)
 
-    model = AttentionVariant(config).to(device)
+    model = QuadAspectEnhancedBertModel(config).to(device)
     tokenizer = AutoTokenizer.from_pretrained(f"../pretrain_models/{args.model_name}")
     # print(model)
 
@@ -910,10 +980,11 @@ def train_asqp_model(args, train_data, eval_data):
         eval_strategy="steps",
         eval_steps=50,
         bf16=True, # bf16精度较低但是数值范围更大
-        bf16_full_eval=True,
         metric_for_best_model='F1_Macro',
         save_total_limit=2,
         load_best_model_at_end=True,
+        greater_is_better=True,
+        dataloader_num_workers=0,
     )
 
     trainer = AspectAwareTrainer(
@@ -929,23 +1000,19 @@ def train_asqp_model(args, train_data, eval_data):
     return model
 
 def seed_everything(seed):
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'  # 设置CUDA工作区配置
-
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
-    torch.use_deterministic_algorithms(True)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False  # 启用Cudnn
 
 
 def main(args):
     # 加载数据
-    quad_file = f'../output/sentiment_asqp_results_corpus_expand_gpt3.5.json'
+    quad_file = f'../output/sentiment_asqp_results_corpus_expand_llama.json'
     quad_file_verified = f'../output/quad_results_v1/sentiment_asqp_results_corpus_expand_verified_gpt4o.json'
     corpus_file = '../data/citation_sentiment_corpus_expand.csv'
     # pos_neg_samples, neutral_samples = load_asqp_data_verified(quad_file_verified, corpus_file)
@@ -1031,15 +1098,15 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--model_name", type=str, default="roberta-llama3.1405B-twitter-sentiment")
+    parser.add_argument("--seed", type=int, default=41)
+    parser.add_argument("--model_name", type=str, default="scibert-scivocab-uncased")
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--learning_rate", type=float, default=2e-5)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--accumulation_steps", type=int, default=1)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
-    parser.add_argument("--loss_type", type=str, default="focal_loss")
+    parser.add_argument("--loss_type", type=str, default="ce_loss")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args()
 

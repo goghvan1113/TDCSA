@@ -14,7 +14,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from sklearn.utils import shuffle
-from transformers import TrainerCallback, TrainerState, TrainerControl
+from transformers import TrainerCallback, TrainerState, TrainerControl, PreTrainedModel, PretrainedConfig, AutoConfig
 from sklearn.model_selection import KFold
 from huggingface_hub import notebook_login
 from sklearn.model_selection import train_test_split
@@ -30,11 +30,12 @@ def main(args):
     label2id={"Neutral":0, "Positive":1, "Negative":2}
 
     device = torch.device(args.device)
-    filepath = '../data/citation_sentiment_corpus_expand.csv'
+    filepath = '../data/citation_sentiment_corpus.csv'
+    config = CustomBERTConfig(num_labels=3, backbone_model=args.model_name)
+    model = CustomBERTModel(config).to(device)
     model_dir = f"../pretrain_models/{args.model_name}"
-    # model_dir = f"../citation_finetuned_models/{args.model_name}_cpt"
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    model = CustomBERTModel.from_pretrained(model_dir, num_labels=3, id2label=id2label, label2id=label2id).to(device)
+    # print(model)
 
     train_texts, train_labels, val_texts, val_labels, test_texts, test_labels = load_sentiment_datasets(
         test_size=0.2,
@@ -71,13 +72,10 @@ def main(args):
         logging_steps=50,
         eval_strategy="steps",
         eval_steps=50,
-        disable_tqdm=False,
-        bf16= True, # faster and use less memory
+        bf16=True, # faster and use less memory
         metric_for_best_model='F1_Macro',
         save_total_limit=2,
         load_best_model_at_end=True,
-        greater_is_better=True,
-        # push_to_hub=True,
     )
 
     trainer = CustomTrainer(
@@ -127,22 +125,64 @@ class SentimentDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.labels)
 
+class CustomBERTConfig(PretrainedConfig):
+    def __init__(self, num_labels=3, backbone_model: str="roberta-base", hidden_dropout_prob: float = 0.1, **kwargs):
+        super().__init__(**kwargs)
+        backbone_config = AutoConfig.from_pretrained(f'../pretrain_models/{backbone_model}')
+        self.num_labels = num_labels
+        self.hidden_size = backbone_config.hidden_size
+        self.hidden_dropout_prob = hidden_dropout_prob
+        self.backbone_model = backbone_model
 
-class CustomBERTModel(AutoModelForSequenceClassification):
-    def __init__(self, config):
-        super(CustomBERTModel, self).__init__(config)
-        self.bert = AutoModel.from_pretrained(config._name_or_path)
-        self.dropout = torch.nn.Dropout(0.3)
-        self.classifier = torch.nn.Linear(self.bert.config.hidden_size, config.num_labels)
+class CustomBERTModel(PreTrainedModel):
+    config_class = CustomBERTConfig
+    def __init__(self, config: CustomBERTConfig):
+        super().__init__(config)
+        self.bert = AutoModel.from_pretrained(f'../pretrain_models/{config.backbone_model}')
+        hidden_size = config.hidden_size
+
+        # 自注意力层 - 增强特征提取
+        self.self_attention = nn.MultiheadAttention(
+            embed_dim=hidden_size,
+            num_heads=8,
+            dropout=config.hidden_dropout_prob,
+            batch_first=True
+        )
+
+        # 特征转换层
+        self.text_transform = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.LayerNorm(hidden_size),
+            nn.ReLU(),
+            nn.Dropout(config.hidden_dropout_prob)
+        )
+
+        # 分类器 - 直接使用BERT输出
+        self.classifier = nn.Linear(hidden_size, config.num_labels)
+
+        self.init_weights()
 
 
     def forward(self, input_ids, attention_mask=None, token_type_ids=None, labels=None):
-        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids)
-        pooled_output = outputs.last_hidden_state[:, 0, :]  # Use the CLS token representation
-        pooled_output = self.dropout(pooled_output)
-        logits = self.classifier(pooled_output)
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        text_hidden = outputs.last_hidden_state
+        text_pooled = text_hidden[:, 0, :]
 
-        return logits
+        text_transformed = self.text_transform(text_hidden)
+
+        # 自注意力增强
+        self_attn_output, _ = self.self_attention(
+            query=text_transformed,
+            key=text_transformed,
+            value=text_transformed,
+            key_padding_mask=~attention_mask.bool()
+        )
+        attn_pooled = torch.mean(self_attn_output, dim=1)
+
+        # 分类预测 - 使用注意力增强的特征
+        logits = self.classifier(text_pooled)
+
+        return {'logits': logits}
 
 
 class CustomTrainer(Trainer):
@@ -153,7 +193,7 @@ class CustomTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False):
         labels = inputs.pop("labels")
         outputs = model(**inputs)
-        logits = outputs.logits
+        logits = outputs["logits"]
         if self.loss_type == 'focal_loss':
             loss_fct = MultiFocalLoss(num_class=3, alpha=0.8, gamma=2.0)
         elif self.loss_type == 'dsc_loss':
@@ -338,12 +378,10 @@ def save_and_plot(trainer, val_dataset, test_dataset, label2id, output_path='../
 
     # Generate classification reports
     val_report = classification_report(val_labels, val_preds, target_names=list(label2id.keys()), digits=4)
-    test_report = classification_report(test_labels, test_preds, target_names=list(label2id.keys()), digits=4)
-
-    # Print reports
     print("\nValidation Set Results:")
     print(val_report)
 
+    test_report = classification_report(test_labels, test_preds, target_names=list(label2id.keys()), digits=4)
     print("\nTest Set Results:")
     print(test_report)
 
@@ -367,9 +405,9 @@ def save_and_plot(trainer, val_dataset, test_dataset, label2id, output_path='../
         json.dump(existing_results, f, indent=4)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__': 
     parser = argparse.ArgumentParser()  # 创建命令行解析对象
-    parser.add_argument('--model_name', type=str, default='scibert_scivocab_uncased',help='Model name or path')  # 添加命令行参数
+    parser.add_argument('--model_name', type=str, default='xlnet-base-cased',help='Model name or path')  # 添加命令行参数
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
     parser.add_argument('--epochs', type=int, default=3, help='Number of epochs')
     parser.add_argument('--accumulation_steps', type=int, default=1, help='Gradient accumulation steps')
