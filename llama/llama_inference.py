@@ -1,4 +1,6 @@
 from collections import Counter
+
+from openai import OpenAI, APITimeoutError
 from sklearn.model_selection import train_test_split
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
@@ -9,6 +11,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report
 import json
 import os
+import time
 
 from bert.plot_results import plot_confusion_matrix
 
@@ -100,111 +103,170 @@ def load_sentiment_datasets(test_size=0.2, val_size=0.1, seed=42, filepath='../d
     else:
         return sentences, labels
 
-def citation_classify(file_path, model, tokenizer, device):
-    texts, real_labels = load_sentiment_datasets(filepath=file_path, is_split=False)
-    label_map = {0: 'neutral', 1: 'positive', 2: 'negative'}
-    labels = [label_map[label] for label in real_labels]
+deepseek_api = "sk-47cf9e5ebda644b4b8dd48e5a9c1268d"
+deepseek_url = "https://api.deepseek.com/v1"
+deepseek_model = "deepseek-chat"
+deepbricks_api = "sk-ybgZNYqegwDjhGRDZKIHOYoYQLWTCSLh52Qbv0uF81J0U3n0"
+deepbricks_url = "https://api.deepbricks.ai/v1/"
+deepbricks_model = "gpt-3.5-turbo"
 
-    print("Total texts: ", len(texts))
-    print(f"Positive labels: {real_labels.count(1)}, Negative labels: {real_labels.count(2)},Neutral labels: {real_labels.count(0)}")
+shot6_prompt = '''
+    You are an expert in scientific citation sentiment analysis, specifically trained to evaluate the rhetorical intent and attitude expressed in academic citations. Your task is to classify citations as 'positive', 'neutral', or 'negative' based on careful linguistic and contextual analysis.
 
-    pred_labels = []
-    exception_responses = []
+    CLASSIFICATION CRITERIA:
 
-    # prompt source: https://github.com/aielte-research/LlamBERT/blob/main/LLM/model_inputs/IMDB/promt_eng_0-shot_prompts.json
-    for text in tqdm(texts):
-        system_prompt = '''
-        You are an expert in scientific citation sentiment analysis, specifically trained to evaluate the rhetorical intent and attitude expressed in academic citations. Your task is to classify citations as 'positive', 'neutral', or 'negative' based on careful linguistic and contextual analysis.
+    1. Positive Citations:
+       - Express strong agreement or endorsement
+       - Highlight significant contributions or advances
+       - Use explicit praise or positive evaluation
+       - Build upon the cited work as foundation
+       - Keywords: "significant", "innovative", "crucial", "successfully", "effective", "important contribution"
 
-        CLASSIFICATION CRITERIA:
+    2. Neutral Citations:
+       - Factual references without evaluation
+       - Background information or context
+       - Methodology descriptions
+       - Related work mentions
+       - Balanced discussions with both pros and cons
+       - Keywords: "reported", "investigated", "studied", "examined", "analyzed", "proposed"
 
-        1. Positive Citations:
-           - Express strong agreement or endorsement
-           - Highlight significant contributions or advances
-           - Use explicit praise or positive evaluation
-           - Build upon the cited work as foundation
-           - Keywords: "significant", "innovative", "crucial", "successfully", "effective", "important contribution"
+    3. Negative Citations:
+       - Express disagreement or criticism
+       - Point out limitations or gaps
+       - Question validity or reliability
+       - Contrast with better approaches
+       - Keywords: "limited", "fails to", "overlooks", "inadequate", "questionable", "inconsistent"
 
-        2. Neutral Citations:
-           - Factual references without evaluation
-           - Background information or context
-           - Methodology descriptions
-           - Related work mentions
-           - Balanced discussions with both pros and cons
-           - Keywords: "reported", "investigated", "studied", "examined", "analyzed", "proposed"
+    CONTEXTUAL CONSIDERATIONS:
+    - Consider hedging language and academic politeness
+    - Evaluate both explicit and implicit criticism
+    - Account for field-specific citation practices
+    - Check for sarcasm or subtle criticism
+    - Note temporal context (e.g., "at that time")
 
-        3. Negative Citations:
-           - Express disagreement or criticism
-           - Point out limitations or gaps
-           - Question validity or reliability
-           - Contrast with better approaches
-           - Keywords: "limited", "fails to", "overlooks", "inadequate", "questionable", "inconsistent"
+    EXAMPLES:
 
-        CONTEXTUAL CONSIDERATIONS:
-        - Consider hedging language and academic politeness
-        - Evaluate both explicit and implicit criticism
-        - Account for field-specific citation practices
-        - Check for sarcasm or subtle criticism
-        - Note temporal context (e.g., "at that time")
+    Positive:
+    1. "In fact, researchers in sentiment analysis have realized benefits by decomposing the problem into S/O and polarity classification  ."
+       Reasoning: Direct mention of positive outcomes ("benefits")
+       Label: positive
 
-        EXAMPLES:
+    2. "Another successful distributed network model, called the beat frequency model, uses beats between multiple oscillators to produce a much wider range of durations than the intrinsic periods of individual oscillators  ."
+       Reasoning: Explicit praise with "successful" and highlights advantages
+       Label: positive
 
-        Positive:
-        1. "Smith et al.'s groundbreaking work (2020) established a robust framework that has significantly advanced our understanding of neural networks."
-           Reasoning: Uses strong positive terms ("groundbreaking", "significantly advanced")
-           Label: positive
+    Neutral:
+    1. "ang and Lee   applied two different classifiers to perform sentiment annotation in two sequential steps: the first classifier separated subjective   texts from objective   ones and then they used the second classifier to classify the subjective texts into positive and negative"
+       Reasoning: Pure methodological description without evaluation
+       Label: neutral
 
-        2. "The innovative approach proposed by Jones (2019) effectively resolved the long-standing challenges in quantum computing."
-           Reasoning: Emphasizes innovation and successful problem-solving
-           Label: positive
+    2. "Several teams had approaches that relied   on an IBM model of statistical machine translation  , with different improvements brought by different teams, consisting of new submodels, improvements in the HMM model, model combination for optimal alignment, etc. Se-veral teams used symmetrization metrics, as introduced in    , most of the times applied on the alignments produced for the two directions sourcetarget and targetsource, but also as a way to combine different word alignment systems."
+       Reasoning: Factual reporting of different approaches without judgment
+       Label: neutral
 
-        Neutral:
-        1. "The experiment used the methodology described in Brown (2018), employing a sample size of 500 participants."
-           Reasoning: Purely descriptive, no evaluation
-           Label: neutral
+    Negative:
+    1. "Although, there are various manual/automatic evaluation methods for these systems, e.g., BLEU  , these methods are basically incapable of dealing with an MTsystem and a w/p-MT-system at the same time, as they have different output forms."
+       Reasoning: Directly criticizes methods' limitations using "incapable"
+       Label: negative
 
-        2. "Previous studies have investigated this phenomenon using various approaches (Wang 2021; Lee 2022)."
-           Reasoning: Simple acknowledgment of existing work
-           Label: neutral
+    2. "Some other recent work has focused on the problem of implicit citation extraction (Kaplan et al., 2009; Qazvinian and Radev, 2010). Kaplan et al. (2009) explore co-reference chains for citation extraction using a combination of co-reference resolution techniques (Soon et al., 2001; Ng and Cardie, 2002). However, the corpus that they use consists of only 94 citations to 4 papers and is likely to be too small to be representative."
+       Reasoning: Questions data representativeness, criticizes sample size
+       Label: negative
 
-        Negative:
-        1. "While Zhang's model (2021) attempts to address the issue, it fails to account for crucial environmental variables."
-           Reasoning: Points out significant limitation
-           Label: negative
+    DECISION RULES:
+    1. If the citation contains explicit positive evaluation → positive
+    2. If the citation mainly reports facts or methods → neutral
+    3. If the citation points out clear limitations or problems → negative
+    4. If mixed but criticism outweighs praise → negative
+    5. If mixed but praise outweighs criticism → positive
+    6. If truly balanced or unclear → neutral
 
-        2. "The conclusions drawn by Miller (2019) are based on questionable assumptions and insufficient data."
-           Reasoning: Direct criticism of methodology and conclusions
-           Label: negative
+    Remember: Academic writing often uses subtle language. Look for:
+    - Hedging words ("might", "could", "perhaps")
+    - Contrast markers ("however", "although", "while")
+    - Emphasis markers ("notably", "particularly", "especially")
+    - Criticism softeners ("somewhat", "relatively", "rather")
+    '''
 
-        DECISION RULES:
-        1. If the citation contains explicit positive evaluation → positive
-        2. If the citation mainly reports facts or methods → neutral
-        3. If the citation points out clear limitations or problems → negative
-        4. If mixed but criticism outweighs praise → negative
-        5. If mixed but praise outweighs criticism → positive
-        6. If truly balanced or unclear → neutral
+def citation_classify(text, model, tokenizer, device, with_api=True):
+    shot0_prompt = '''
+    You are an expert in scientific citation sentiment analysis, specifically trained to evaluate the rhetorical intent and attitude expressed in academic citations. Your task is to classify citations as 'positive', 'neutral', or 'negative' based on careful linguistic and contextual analysis.
 
-        Remember: Academic writing often uses subtle language. Look for:
-        - Hedging words ("might", "could", "perhaps")
-        - Contrast markers ("however", "although", "while")
-        - Emphasis markers ("notably", "particularly", "especially")
-        - Criticism softeners ("somewhat", "relatively", "rather")
-        '''
+    CLASSIFICATION CRITERIA:
 
-        user_prompt = f'''
-        Please analyze the following scientific citation and classify its sentiment as 'positive', 'neutral', or 'negative'. Consider both explicit and implicit sentiment markers, hedging language, and academic context:
+    1. Positive Citations:
+       - Express strong agreement or endorsement
+       - Highlight significant contributions or advances
+       - Use explicit praise or positive evaluation
+       - Build upon the cited work as foundation
+       - Keywords: "significant", "innovative", "crucial", "successfully", "effective", "important contribution"
 
-        Citation text:
-        {text}
+    2. Neutral Citations:
+       - Factual references without evaluation
+       - Background information or context
+       - Methodology descriptions
+       - Related work mentions
+       - Balanced discussions with both pros and cons
+       - Keywords: "reported", "investigated", "studied", "examined", "analyzed", "proposed"
 
-        Provide only the sentiment label as response.
-        '''
+    3. Negative Citations:
+       - Express disagreement or criticism
+       - Point out limitations or gaps
+       - Question validity or reliability
+       - Contrast with better approaches
+       - Keywords: "limited", "fails to", "overlooks", "inadequate", "questionable", "inconsistent"
 
-        messages = [
-            {'role': 'system', 'content': system_prompt},
-            {'role': 'user', 'content': user_prompt}
-        ]
+    CONTEXTUAL CONSIDERATIONS:
+    - Consider hedging language and academic politeness
+    - Evaluate both explicit and implicit criticism
+    - Account for field-specific citation practices
+    - Check for sarcasm or subtle criticism
+    - Note temporal context (e.g., "at that time")
 
+    DECISION RULES:
+    1. If the citation contains explicit positive evaluation → positive
+    2. If the citation mainly reports facts or methods → neutral
+    3. If the citation points out clear limitations or problems → negative
+    4. If mixed but criticism outweighs praise → negative
+    5. If mixed but praise outweighs criticism → positive
+    6. If truly balanced or unclear → neutral
+
+    Remember: Academic writing often uses subtle language. Look for:
+    - Hedging words ("might", "could", "perhaps")
+    - Contrast markers ("however", "although", "while")
+    - Emphasis markers ("notably", "particularly", "especially")
+    - Criticism softeners ("somewhat", "relatively", "rather")
+    '''
+
+    user_prompt = f'''
+    Please analyze the following scientific citation and classify its sentiment as 'positive', 'neutral', or 'negative'. Consider both explicit and implicit sentiment markers, hedging language, and academic context:
+
+    Citation text:
+    {text}
+
+    Provide only the sentiment label as response.
+    '''
+
+    messages = [
+        {'role': 'system', 'content': shot0_prompt},
+        {'role': 'user', 'content': user_prompt}
+    ]
+
+    if with_api:
+        client = OpenAI(
+            base_url=deepbricks_url,
+            api_key=deepbricks_api
+        )
+        response = client.chat.completions.create(
+            model=deepbricks_model,
+            messages=messages,
+            max_tokens=16,
+            temperature=0.1,
+            top_p=0.95,
+            stream=False,
+        )
+        response = response.choices[0].message.content
+    else:
         input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         model_input = tokenizer([input_text], return_tensors='pt').to(device)
         attention_mask = torch.ones(model_input.input_ids.shape, dtype=torch.long, device=device)
@@ -218,87 +280,103 @@ def citation_classify(file_path, model, tokenizer, device):
         generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in
                          zip(model_input.input_ids, generated_ids)]
         response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        response = response.lower()  # avoid Negative != negative
-        print(response)
 
-        try:
-            if response == 'negative':
-                pred_labels.append(2)
-            elif response == 'positive':
-                pred_labels.append(1)
-            else:
-                pred_labels.append(0)
-        except:
-            print(f"Error in processing {text}, response: {response}")
-            pred_labels.append(0)
+    response = response.lower().strip()
+    print(response)
+
+    if response == 'negative':
+        pred_label = 2
+    elif response == 'positive':
+        pred_label = 1
+    else:
+        pred_label = 0
+
+    return pred_label
+
+def process_dataset(file_path, model, tokenizer, device, checkpoint_dir=None, with_api=True):
+    if checkpoint_dir is None:
+        checkpoint_dir = "checkpoints"
+
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    checkpoint_file = os.path.join(checkpoint_dir, "classification_checkpoint.json")
+
+    # Load checkpoint if exists
+    start_idx = 0
+    pred_labels = []
+    real_labels = []
+
+    if os.path.exists(checkpoint_file):
+        with open(checkpoint_file, 'r', encoding='utf-8') as f:
+            checkpoint_data = json.load(f)
+            start_idx = checkpoint_data['last_processed_index'] + 1
+            pred_labels = checkpoint_data['pred_labels']
+            real_labels = checkpoint_data['real_labels']
+            print(f"Resuming from index {start_idx}")
+    else:
+        # Load dataset
+        texts, real_labels = load_sentiment_datasets(filepath=file_path, is_split=False)
+        # Map labels
+        label_map = {0: 'neutral', 1: 'positive', 2: 'negative'}
+        labels = [label_map[label] for label in real_labels]
+
+        print("Total texts: ", len(texts))
+        print(f"Positive labels: {real_labels.count(1)}, Negative labels: {real_labels.count(2)}, Neutral labels: {real_labels.count(0)}")
+
+    max_retries = 3
+    texts, _ = load_sentiment_datasets(filepath=file_path, is_split=False)
+
+    try:
+        for idx in tqdm(range(start_idx, len(texts)),
+                        desc="Classifying texts",
+                        initial=start_idx,
+                        total=len(texts)):
+            text = texts[idx]
+            retry_count = 0
+            while retry_count < max_retries:
+                try:
+                    # Call citation_classify for the single text
+                    pred_label = citation_classify(text, model, tokenizer, device, with_api=with_api)
+                    pred_labels.append(pred_label)
+                    break  # Break retry loop on success
+
+                except APITimeoutError as e:
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        print(f"\nTimeout error on item {idx}. Retrying ({retry_count}/{max_retries})...")
+                        time.sleep(5)
+                    else:
+                        print(f"\nMax retries exceeded for item {idx}. Saving checkpoint and exiting.")
+                        raise e
+
+            # Save checkpoint every 10 items
+            if idx % 10 == 0:
+                checkpoint_data = {
+                    'last_processed_index': idx,
+                    'pred_labels': pred_labels,
+                    'real_labels': real_labels,
+                }
+                with open(checkpoint_file, 'w', encoding='utf-8') as f:
+                    json.dump(checkpoint_data, f, ensure_ascii=False, indent=2)
+
+    except Exception as e:
+        # Save checkpoint on any error
+        print(f"\nError occurred at index {idx}: {str(e)}")
+        checkpoint_data = {
+            'last_processed_index': idx - 1,
+            'pred_labels': pred_labels,
+            'real_labels': real_labels,
+        }
+        with open(checkpoint_file, 'w', encoding='utf-8') as f:
+            json.dump(checkpoint_data, f, ensure_ascii=False, indent=2)
+        raise e
+
+    # Clean up checkpoint file if processing completed successfully
+    if os.path.exists(checkpoint_file):
+        os.remove(checkpoint_file)
 
     return real_labels, pred_labels
 
-
-def label_unsupervised():
-    df = pd.read_csv('../data/citing_paper_contexts_unlabeled.csv')
-    texts = df['text'].tolist()
-
-    pred_labels = []
-    exception_responses = []
-
-    # prompt source:
-    for text in tqdm(texts):
-        prompt = text
-
-        messages = [{
-            'role':
-                'system',
-            'content':
-                'You are an expert in scientific citation sentiment analysis who can judge the attitude of a citation text. Please answer with \'positive\' , \'neutral\' or \'negative\' only!\n'
-        }]
-        prompt = f'Decide if the following scientific citation text expresses a positive, neutral, or negative sentiment towards the research or findings: \n {prompt} \nIf the citation text is positive, indicating approval, agreement, or support for the research, please answer \'positive\'. If the citation text is neutral, meaning it does not express a clear opinion or sentiment, please answer \'neutral\'. If the citation text is negative, indicating criticism, disagreement, or rejection of the research, please answer \'negative\'. Make your decision based on the overall tone and content of the citation. If the sentiment is unclear, default to \'neutral\'.'
-
-        messages.append({'role': 'user', 'content': prompt})
-
-        text = tokenizer.apply_chat_template(messages,
-                                             tokenize=False,
-                                             add_generation_prompt=True)
-
-        model_input = tokenizer([text], return_tensors='pt').to(device)
-        attention_mask = torch.ones(model_input.input_ids.shape,
-                                    dtype=torch.long,
-                                    device=device)
-        generated_ids = model.generate(
-            model_input.input_ids,
-            max_new_tokens=16,
-            attention_mask=attention_mask,
-            pad_token_id=tokenizer.eos_token_id,
-        )
-
-        generated_ids = [
-            output_ids[len(input_ids):] for input_ids, output_ids in zip(
-                model_input.input_ids, generated_ids)
-        ]
-
-        response = tokenizer.batch_decode(generated_ids,
-                                          skip_special_tokens=True)[0]
-        response = response.lower()  # avoid Negative != negative
-        print(response)
-        if response not in ['positive', 'negative', 'neutral']:
-            exception_responses.append(response)
-            response = 'neutral'
-        if response == 'negative':
-            pred_labels.append(2)
-        elif response == 'positive':
-            pred_labels.append(1)
-        else:
-            pred_labels.append(0)
-
-        print(f'{response} \n')
-
-    df['sentiment'] = pred_labels
-    df.to_csv('./data/citing_paper_contexts_llm.csv', index=False)
-
-    print("exception_responses: ", exception_responses)
-
-
-if __name__ == '__main__':
+def main():
     seed = 42
     seed_everything(seed)
 
@@ -308,13 +386,18 @@ if __name__ == '__main__':
     device = 'cuda:0'
 
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
-    model = AutoModelForCausalLM.from_pretrained(model_dir,
-                                                 torch_dtype=torch.bfloat16,
-                                                 attn_implementation='flash_attention_2',
-                                                 device_map=device)
+    # model = AutoModelForCausalLM.from_pretrained(model_dir,
+    #                                              torch_dtype=torch.bfloat16,
+    #                                              attn_implementation='flash_attention_2',
+    #                                              device_map='auto')
+    model = None
 
-    real_labels, pred_labels = citation_classify(file_path, model, tokenizer, device)
+    real_labels, pred_labels = process_dataset(file_path, model, tokenizer, device, with_api=True)
+
     report = classification_report(real_labels, pred_labels, target_names=['neutral', 'positive', 'negative'], digits=4)
     print(report)
 
     plot_confusion_matrix(real_labels, pred_labels, ['neutral', 'positive', 'negative'], title='Confusion Matrix')
+
+if __name__ == '__main__':
+    main()

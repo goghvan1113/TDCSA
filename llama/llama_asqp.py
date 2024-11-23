@@ -27,18 +27,13 @@ def seed_everything(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-nvidia_model = "meta/llama-3.1-405b-instruct"
-nvidia_url = "https://integrate.api.nvidia.com/v1"
-api_key_1 = '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'  ## 1663653541
-api_key_2 = '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'  # gaof23@mails
-api_call_count = 0
-max_api_calls = 950
+
 deepseek_api = "sk-47cf9e5ebda644b4b8dd48e5a9c1268d"
 deepseek_url = "https://api.deepseek.com/v1"
 deepseek_model = "deepseek-chat"
 deepbricks_api = "sk-ybgZNYqegwDjhGRDZKIHOYoYQLWTCSLh52Qbv0uF81J0U3n0"
 deepbricks_url = "https://api.deepbricks.ai/v1/"
-deepbricks_model = "GPT-4o-2024-08-06"
+deepbricks_model = "LLama-3.1-70b"
 
 
 def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device, with_api=False):
@@ -99,7 +94,7 @@ def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device, with
         Overall Sentiment: {sentiment}
 
         Provide your response in the format of a Python list of tuples:
-        Sentiment elements: [("aspect term", "opinion term", "aspect category", "sentiment polarity", confidence score), ("aspect term", "opinion term", "aspect category", "sentiment polarity", confidence score)]
+        [("aspect term", "opinion term", "aspect category", "sentiment polarity", confidence score), ("aspect term", "opinion term", "aspect category", "sentiment polarity", confidence score)]
 
         Only include the list of quadruples in your response, with no additional text.
         '''
@@ -367,7 +362,7 @@ def load_results(file_path):
         return json.load(f)
 
 
-def process_dataset(file_path, tokenizer, model, device, checkpoint_dir=None):
+def process_dataset(file_path, tokenizer, model, device, checkpoint_dir=None, with_api=True):
 
     if checkpoint_dir is None:
         checkpoint_dir = "checkpoints"
@@ -408,7 +403,7 @@ def process_dataset(file_path, tokenizer, model, device, checkpoint_dir=None):
                                                               tokenizer,
                                                               model,
                                                               device,
-                                                              with_api=True)
+                                                              with_api=with_api)
                     results.append({
                         'text': item['Citation_Text'],
                         'overall_sentiment': item['Sentiment'],
@@ -449,7 +444,7 @@ def process_dataset(file_path, tokenizer, model, device, checkpoint_dir=None):
 
 
 def process_dataset_with_verification(file_path, extractor_model, verifier_model, tokenizer, device,
-                                      initial_output_dir=None, final_output_dir=None, checkpoint_dir=None):
+                                      initial_output_dir=None, final_output_dir=None, checkpoint_dir=None, with_api=True):
     """
     Process the dataset with both extraction and verification steps, including error handling and checkpointing
 
@@ -498,7 +493,7 @@ def process_dataset_with_verification(file_path, extractor_model, verifier_model
                         tokenizer,
                         verifier_model,
                         device,
-                        with_api=True
+                        with_api=with_api
                     )
 
                     # Process verification results
@@ -611,7 +606,7 @@ def main():
     seed_everything(seed)
 
     file_path = '../data/citation_sentiment_corpus_expand.csv'
-    initial_output_dir = '../output/sentiment_asqp_results_corpus_expand_llama3b.json'
+    initial_output_dir = '../output/sentiment_asqp_results_corpus_expand_llama70b.json'
     final_output_dir = '../output/sentiment_asqp_results_corpus_expand_verified_deepseek.json'
     extractor_model_name = 'Meta-Llama-3-8B-Instruct'
     verifier_model_name = 'Meta-Llama-3.1-8B-Instruct'
@@ -633,19 +628,20 @@ def main():
     # )
     verifier_model = None
 
-    # initial_results = process_dataset(file_path, tokenizer, extractor_model, device)
-    # save_results(initial_results, initial_output_dir)
+    initial_results = process_dataset(file_path, tokenizer, extractor_model, device, with_api=True)
+    save_results(initial_results, initial_output_dir)
 
-    results, quality_metrics = process_dataset_with_verification(
-        file_path,
-        extractor_model,
-        verifier_model,
-        tokenizer,
-        device,
-        initial_output_dir,
-        final_output_dir,
-    )
-    print("Quality metrics:", quality_metrics)
+    # results, quality_metrics = process_dataset_with_verification(
+    #     file_path,
+    #     extractor_model,
+    #     verifier_model,
+    #     tokenizer,
+    #     device,
+    #     initial_output_dir,
+    #     final_output_dir,
+    #     with_api=True
+    # )
+    # print("Quality metrics:", quality_metrics)
 
     # 'average_confidence': 0.8289524599226354,
     # 'total_original_quadruples': 3618,

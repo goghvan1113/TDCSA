@@ -2,22 +2,21 @@ import argparse
 import json
 import os
 import random
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime
 
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, gridspec
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from transformers import AutoConfig, PreTrainedModel, AutoModel, Trainer, PretrainedConfig, AutoTokenizer, \
     TrainingArguments, TrainerCallback, DataCollatorWithPadding
 
-from transformers_interpret import MultiLabelClassificationExplainer
-from torchviz import make_dot
+
 from torch import nn
 import torch
 import torch.nn.functional as F
-from typing import Optional, Dict, Union, List, Any, Tuple, Mapping
+from typing import Optional, Dict, Union, List, Any, Tuple, Mapping, Callable
 from dataclasses import dataclass
 import numpy as np
 import pandas as pd
@@ -281,11 +280,15 @@ def compute_metrics(pred):
         'Accuracy_2class': acc_2class
     }
 
+
 class QuadAspectDataProcessor:
     """数据预处理器 - 处理四元组数据"""
-    def __init__(self, tokenizer: Any, max_length: int = 512):
+
+    def __init__(self, tokenizer: Any, max_length: int = 512,
+                 backbone_model: str = 'bert-base-uncased'):
         self.tokenizer = tokenizer
         self.max_length = max_length
+        self.backbone_model = backbone_model.lower()
         self.category2id = {  # 预定义类别映射
             'METHODOLOGY': 0,
             'PERFORMANCE': 1,
@@ -294,43 +297,8 @@ class QuadAspectDataProcessor:
             'LIMITATION': 4,
         }
 
-    def build_category_vocab(self, features):
-        """使用预定义的类别词表"""
-        return len(self.category2id)
-
-    def process_features(self, features: Dict[str, Any], method='mask') -> Dict[str, Any]:
-        """处理四元组特征"""
-        texts = [f.get('text', '') for f in features]
-        labels = [f.get('label', 0) for f in features]  # 使用get方法安全获取标签
-        sentiment_labels = [1 if label > 0 else 0 for label in labels]
-
-        text_encoding = self.tokenizer(
-            texts,
-            padding=True,
-            truncation=True,
-            max_length=self.max_length,
-            return_tensors='pt'
-        )
-
-        # Collect all positive and negative quadruples
-        pos_neg_quads = []
-        for feature in features:
-            if feature.get('label', 0) != 0:  # Positive or Negative samples
-                quads = feature.get('quads', [])
-                pos_neg_quads.extend(quads)
-
-        # 处理四元组
-        quad_texts = []
-        category_ids = []
-        for feature in features:
-            if feature.get('label', 0) == 0:  # Neutral sample
-                # method = random.choice(['random_mask', 'random_polar', 'random_words'])
-                if method == 'empty':
-                    quad_text = ''
-                    category_id = 0
-                elif method == 'random_mask':
-                    # 使用[MASK]符号和随机噪声填充中性样本的三元组
-                    noise_tokens = [
+        # 中性样本处理的噪声词库
+        self.noise_tokens = [
                         "neutral", "sample", "info", "example", "text", "generic", "data", "reference", "analysis",
                         "method", "approach", "context", "details", "review", "background", "overview", "basis",
                         "supporting", "summary", "aspect", "topic", "result", "content", "framework", "definition",
@@ -356,76 +324,158 @@ class QuadAspectDataProcessor:
                         "idea", "conception", "feature", "element", "hypothesis", "evaluation", "syntax",
                         "concept", "notion", "comparison", "scheme", "basis", "modeling", "pattern", "aspect",
                         "object", "theory", "property", "domain", "notation", "factor", "rationale", "viewpoint"
-                    ]
-                    num_neutral_tags = random.randint(1, 2)  # 随机选择1到2个中性标记
-                    num_words = random.randint(2, 5)  # 随机选择2到5个中性词
+        ]
+        # 设置mask token
+        self.mask_token = self._get_mask_token()
 
-                    neutral_tags = ["[MASK]"] * num_neutral_tags
-                    random_words = random.sample(noise_tokens, num_words)
+    def _get_mask_token(self) -> str:
+        """
+        根据backbone model确定mask token
+        仅判断是否包含roberta或bert字符串
 
-                    combined_list = neutral_tags + random_words
-                    random.shuffle(combined_list)
-                    if len(combined_list) < 5:  # 截取或者填充
-                        combined_list += ["[MASK]"] * (5 - len(combined_list))
-                    quad_text = " ".join(combined_list[:5])
-                    category_id = 0
-                elif method == 'random_polar':
-                    # Randomly select a quadruple from positive and negative samples
-                    if pos_neg_quads:
-                        aspect, opinion, category, polarity, confidence = random.choice(pos_neg_quads)
-                        quad_text = f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category"
-                        # quad_text = f"This citation expresses [MASK] sentiment towards [ASPECT] through [OPINION] which belongs to [CATEGORY] category"
-                        # quad_text = f"{aspect} is {opinion} in [[MASK]] {category}"
-                        category_id = self.category2id.get(category, 0)
-                    else:
-                        quad_text = ""
-                        category_id = 0
-                elif method == 'random_words':
-                    # 下面代码是随机在中性文本中选择四元组
-                    text_tokens = feature.get('text', '').split()
-                    if len(text_tokens) >= 2:
-                        aspect = random.choice(text_tokens)
-                        opinion = random.choice(text_tokens)
-                    else:
-                        aspect = 'aspect'
-                        opinion = 'opinion'
-                    category = random.choice(list(self.category2id.keys()))
-                    quad_text = f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category"
-                    category_id = self.category2id.get(category, 0)
-            else:
-                quads = feature.get('quads', [])
-                quad_parts = []
-                feature_categories = []
-                for aspect, opinion, category, polarity, confidence in quads:
-                    quad_parts.append(f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category")
-                    # quad_parts.append("This citation expresses [MASK] sentiment towards [ASPECT] through [OPINION] which belongs to [CATEGORY] category")
-                    # quad_parts.append(f"{aspect} is {opinion} in [[MASK]] {category}")
-                    quad_parts.append(" [SEP] ")
-                    feature_categories.append(category)
-                quad_text = " ; ".join(quad_parts)
-                # 使用最常见的类别作为该样本的主类别
-                if feature_categories:
-                    most_common_category = max(set(feature_categories),
-                                            key=feature_categories.count)
-                    category_id = self.category2id.get(most_common_category, 0)
-                else:
-                    category_id = 0
+        Returns:
+            对应模型的mask token
+        """
+        if 'roberta' in self.backbone_model:
+            return '<mask>'
+        # 其他情况默认使用bert的mask token
+        return '[MASK]'
 
-                # # 下面代码是随机在中性文本中选择四元组
-                # text_tokens = feature.get('text', '').split()
-                # if len(text_tokens) >= 2:
-                #     aspect = random.choice(text_tokens)
-                #     opinion = random.choice(text_tokens)
-                # else:
-                #     aspect = 'aspect'
-                #     opinion = 'opinion'
-                # category = random.choice(list(self.category2id.keys()))
-                # quad_text = f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category"
-                # category_id = self.category2id.get(category, 0)
+    def _process_original_quad(self, feature: Dict) -> Tuple[str, int]:
+        """处理原始四元组"""
+        quads = feature.get('quads', [])
+        quad_parts = []
+        feature_categories = []
+
+        for aspect, opinion, category, polarity, confidence in quads:
+            quad_template = f"This citation expresses {self.mask_token} sentiment towards {aspect} through {opinion} which belongs to {category} category"
+            quad_parts.append(quad_template)
+            feature_categories.append(category)
+
+        quad_text = " ; ".join(quad_parts)
+        # 使用最常见的类别作为主类别
+        category_id = (self.category2id.get(max(set(feature_categories),
+                                                key=feature_categories.count)) if feature_categories else 0)
+
+        return quad_text, category_id
+
+    def _process_empty_quad(self, feature: Dict) -> Tuple[str, int]:
+        """返回空四元组"""
+        return '', 0
+
+    def _process_random_mask_quad(self, feature: Dict) -> Tuple[str, int]:
+        """使用随机掩码处理四元组"""
+        num_neutral_tags = random.randint(1, 2)
+        num_words = random.randint(2, 5)
+
+        # 随机选择一个类别
+        category = random.choice(list(self.category2id.keys()))
+        # 获取该类别的随机词
+        neutral_tags = [self.mask_token] * num_neutral_tags
+        random_words = random.sample(self.noise_tokens, num_words)
+
+        # 组合并打乱词序
+        combined_list = neutral_tags + random_words
+        random.shuffle(combined_list)
+
+        # 确保长度合适
+        if len(combined_list) < 5:
+            combined_list += [self.mask_token] * (5 - len(combined_list))
+
+        quad_text = " ".join(combined_list[:5])
+        return quad_text, self.category2id[category]
+
+    def _process_random_polar_quad(self, feature: Dict, pos_neg_quads: List) -> Tuple[str, int]:
+        """使用随机极性处理四元组"""
+        if not pos_neg_quads:
+            return "", 0
+
+        aspect, opinion, category, polarity, confidence = random.choice(pos_neg_quads)
+        quad_text = f"This citation expresses {self.mask_token} sentiment towards {aspect} through {opinion} which belongs to {category} category"
+        category_id = self.category2id.get(category, 0)
+
+        return quad_text, category_id
+
+    def _process_random_words_quad(self, feature: Dict) -> Tuple[str, int]:
+        """使用随机词处理四元组"""
+        text_tokens = feature.get('text', '').split()
+        aspect = random.choice(text_tokens) if len(text_tokens) >= 2 else 'aspect'
+        opinion = random.choice(text_tokens) if len(text_tokens) >= 2 else 'opinion'
+        category = random.choice(list(self.category2id.keys()))
+
+        quad_text = f"This citation expresses {self.mask_token} sentiment towards {aspect} through {opinion} which belongs to {category} category"
+        category_id = self.category2id.get(category, 0)
+
+        return quad_text, category_id
+
+    def _get_processor_method(self, method: str, original_prob: float = 0) -> Callable:
+        """获取处理方法"""
+        method_map = {
+            'original': self._process_original_quad,
+            'empty': self._process_empty_quad,
+            'random_mask': self._process_random_mask_quad,
+            'random_polar': self._process_random_polar_quad,
+            'random_words': self._process_random_words_quad
+        }
+
+        if method == 'random_multi':
+            methods = ['random_mask', 'random_polar', 'random_words']
+            if random.random() < original_prob:
+                return method_map['original']
+            return method_map[random.choice(methods)]
+
+        return method_map.get(method, self._process_empty_quad)
+
+    def process_features(self, features: List[Dict], method: str = 'original',
+                         original_prob: float = 0) -> Dict[str, torch.Tensor]:
+        """
+        处理四元组特征
+
+        Args:
+            features: 特征列表
+            method: 处理方法 ('original', 'empty', 'random_mask', 'random_polar',
+                    'random_words', 'random_multi')
+            original_prob: 使用原始方法的概率 (仅在method='random_multi'时有效)
+
+        Returns:
+            处理后的特征字典
+        """
+        texts = [f.get('text', '') for f in features]
+        labels = [f.get('label', 0) for f in features]
+        sentiment_labels = [1 if label > 0 else 0 for label in labels]
+
+        # 编码原始文本
+        text_encoding = self.tokenizer(
+            texts,
+            padding=True,
+            truncation=True,
+            max_length=self.max_length,
+            return_tensors='pt'
+        )
+
+        # 收集所有正面和负面的四元组
+        pos_neg_quads = []
+        for feature in features:
+            if feature.get('label', 0) != 0:
+                pos_neg_quads.extend(feature.get('quads', []))
+
+        # 处理四元组
+        quad_texts = []
+        category_ids = []
+        processor = self._get_processor_method(method, original_prob)
+
+        for feature in features:
+            if feature.get('label', 0) == 0:  # 中性样本
+                quad_text, category_id = (processor(feature, pos_neg_quads)
+                                          if processor.__name__ == '_process_random_polar_quad'
+                                          else processor(feature))
+            else:  # 非中性样本使用原始处理方法
+                quad_text, category_id = self._process_original_quad(feature)
 
             quad_texts.append(quad_text)
             category_ids.append(category_id)
 
+        # 编码四元组文本
         quad_encoding = self.tokenizer(
             quad_texts,
             padding=True,
@@ -475,15 +525,15 @@ class AspectAwareDataset(torch.utils.data.Dataset):
             self.samples.append({
                 'text': item['text'],
                 'label': label,
-                'quads': item['quads']
+                'quads': item.get('quads', [])
             })
 
-        # Process neutral samples
-        for text in neutral_samples:
+        # Process neutral samples and include their quads
+        for item in neutral_samples:
             self.samples.append({
-                'text': text,
+                'text': item['text'],
                 'label': 0,
-                'quads': []
+                'quads': item.get('quads', [])
             })
         # Shuffle the samples
         random.shuffle(self.samples)
@@ -593,12 +643,13 @@ class DatasetSplitter:
             }
         }
 
-def create_datasets(split_data: Dict, tokenizer, with_asqp: bool = True) -> Tuple[
+def create_datasets(split_data: Dict, tokenizer, with_asqp: bool = True, method='random_words') -> Tuple[
     AspectAwareDataset, AspectAwareDataset, AspectAwareDataset]:
     """
     创建训练集、验证集和测试集的Dataset对象
 
     Args:
+        :param method:
         :param split_data:
         :param tokenizer:
         :param with_asqp:
@@ -615,6 +666,14 @@ def create_datasets(split_data: Dict, tokenizer, with_asqp: bool = True) -> Tupl
 
     if not with_asqp:
         # Convert to pure text format
+        val_neu = [{'text': s['text'],
+                        'overall_sentiment': s['overall_sentiment'],
+                        'quads': []}  # Empty quadruples
+                       for s in split_data['val']['pos_neg_samples']]
+        test_neu = [{'text': s['text'],
+                         'overall_sentiment': s['overall_sentiment'],
+                         'quads': []}  # Empty quadruples
+                        for s in split_data['test']['pos_neg_samples']]
         val_pos_neg = [{'text': s['text'],
                         'overall_sentiment': s['overall_sentiment'],
                         'quads': []}  # Empty quadruples
@@ -627,7 +686,9 @@ def create_datasets(split_data: Dict, tokenizer, with_asqp: bool = True) -> Tupl
     else:
         val_pos_neg = split_data['val']['pos_neg_samples']
         test_pos_neg = split_data['test']['pos_neg_samples']
-        method = 'random_words'
+        val_neu = split_data['val']['neutral_samples']
+        test_neu = split_data['test']['neutral_samples']
+        method = method
 
     train_dataset = AspectAwareDataset(
         pos_neg_samples=split_data['train']['pos_neg_samples'],
@@ -636,18 +697,16 @@ def create_datasets(split_data: Dict, tokenizer, with_asqp: bool = True) -> Tupl
         processor=processor,
         method=method
     )
-
     val_dataset = AspectAwareDataset(
         pos_neg_samples=val_pos_neg,
-        neutral_samples=split_data['val']['neutral_samples'],
+        neutral_samples=val_neu,
         tokenizer=tokenizer,
         processor=processor,
         method=method
     )
-
     test_dataset = AspectAwareDataset(
         pos_neg_samples=test_pos_neg,
-        neutral_samples=split_data['test']['neutral_samples'],
+        neutral_samples=test_neu,
         tokenizer=tokenizer,
         processor=processor,
         method=method
@@ -656,10 +715,10 @@ def create_datasets(split_data: Dict, tokenizer, with_asqp: bool = True) -> Tupl
     return train_dataset, val_dataset, test_dataset
 
 
-def load_asqp_data(quad_file=None, corpus_file=None):
+def load_asqp_data(posnegfile=None, neutral_file=None):
     """加载四元组数据"""
     pos_neg_samples = []
-    with open(quad_file, 'r', encoding='utf-8') as f:
+    with open(posnegfile, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     for item in data:
@@ -672,32 +731,19 @@ def load_asqp_data(quad_file=None, corpus_file=None):
 
     # 加载中性样本
     neutral_samples = []
-    df = pd.read_csv(corpus_file)
-    # neutral_samples = df[df['Sentiment'] == 'o']['Citation_Text'].tolist() # 是Athar数据集的中性样本
-    neutral_samples = df[df['Sentiment'] == 'Neutral']['Text'].tolist()
-
-    return pos_neg_samples, neutral_samples
-
-def load_asqp_data_verified(quad_file=None, corpus_file=None):
-    """加载四元组数据"""
-    pos_neg_samples = []
-    with open(quad_file, 'r', encoding='utf-8') as f:
+    with open(neutral_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     for item in data:
-        if item['overall_sentiment'] in ['positive', 'negative']:
-            pos_neg_samples.append({
+        if item['overall_sentiment'] in ['positive', 'negative', 'neutral']:
+            neutral_samples.append({
                 'text': item['text'],
                 'overall_sentiment': item['overall_sentiment'],
-                'quads': item['final_quadruples']  # 修改为sentiment_quadruples
+                'quads': item['sentiment_quadruples']  # 修改为sentiment_quadruples
             })
 
-    # 加载中性样本
-    neutral_samples = []
-    df = pd.read_csv(corpus_file)
-    neutral_samples = df[df['Sentiment'] == 'Neutral']['Text'].tolist()
-
     return pos_neg_samples, neutral_samples
+
 
 class ModelEvaluator:
     def __init__(self, model, tokenizer, device='cuda'):
@@ -707,94 +753,399 @@ class ModelEvaluator:
         self.model.to(device)
         self.model.eval()
 
+    def _compute_loss(self, logits, labels):
+        return F.cross_entropy(logits, labels, reduction='none')
+
+    def _perform_dimension_reduction(self, embeddings, method='tsne', n_components=2, random_state=42):
+        """执行降维"""
+        if method.lower() == 'tsne':
+            from sklearn.manifold import TSNE
+            reducer = TSNE(n_components=n_components, random_state=random_state)
+        elif method.lower() == 'umap':
+            import umap.umap_ as umap
+            reducer = umap.UMAP(n_components=n_components, random_state=random_state)
+        else:
+            raise ValueError(f"Unsupported dimension reduction method: {method}")
+
+        return reducer.fit_transform(embeddings)
+
+    def _plot_embeddings(self, embeddings_2d, labels, title, timestamp, method):
+        """绘制降维后的嵌入向量"""
+        plt.figure(figsize=(10, 8))
+        scatter = plt.scatter(
+            embeddings_2d[:, 0],
+            embeddings_2d[:, 1],
+            c=labels,
+            cmap='viridis',
+            alpha=0.7
+        )
+
+        # 添加图例
+        legend_labels = ['neutral', 'positive', 'negative']
+        handles = [plt.scatter([], [], c=plt.cm.viridis(i / 2.), label=label)
+                   for i, label in enumerate(legend_labels)]
+        plt.legend(handles=handles)
+
+        plt.title(f'{title} ({method.upper()} Visualization)')
+        plt.xlabel('Dimension 1')
+        plt.ylabel('Dimension 2')
+
+        # 保存图片
+        save_path = f'output/dimension_reduction_{title.lower().replace(" ", "_")}_{method}_{timestamp}.png'
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close()
+        return save_path
+
+    def _visualize_attention(self, text, quad_text, quads, timestamp, output_dir='attention_viz'):
+        """
+        可视化注意力权重,并在图中展示原始四元组
+
+        Args:
+            text: 原始文本
+            quad_text: 处理后的四元组文本
+            quads: 原始四元组列表
+            timestamp: 时间戳
+            output_dir: 输出目录
+        """
+        try:
+            os.makedirs(output_dir, exist_ok=True)
+
+            # 创建一个大图,包含注意力热图和四元组显示
+            fig = plt.figure(figsize=(20, 10))
+
+            # 设置网格布局
+            gs = gridspec.GridSpec(1, 2, width_ratios=[3, 1])
+
+            # 左侧放置注意力热图
+            ax1 = plt.subplot(gs[0])
+            attention_fig = visualize_model_attention(
+                model=self.model,
+                tokenizer=self.tokenizer,
+                text=text,
+                quad_text=quad_text
+            )
+
+            # 将attention_fig中的内容复制到新图的左侧
+            for ax_old in attention_fig.axes:
+                # 复制热图
+                for im in ax_old.images:
+                    ax1.imshow(im.get_array(), cmap=im.get_cmap())
+                # 复制标签和刻度
+                ax1.set_xticks(ax_old.get_xticks())
+                ax1.set_xticklabels(ax_old.get_xticklabels(), rotation=45, ha='right')
+                ax1.set_yticks(ax_old.get_yticks())
+                ax1.set_yticklabels(ax_old.get_yticklabels())
+
+            ax1.set_title("Attention Weights Heatmap")
+
+            # 右侧显示原始四元组
+            ax2 = plt.subplot(gs[1])
+            ax2.axis('off')  # 隐藏坐标轴
+
+            # 构建四元组展示文本
+            quad_display = "Original Quadruples:\n\n"
+            for i, (aspect, opinion, category, polarity, confidence) in enumerate(quads, 1):
+                quad_display += f"{i}. Aspect: {aspect}\n"
+                quad_display += f"   Opinion: {opinion}\n"
+                quad_display += f"   Category: {category}\n"
+                quad_display += f"   Polarity: {polarity}\n"
+                quad_display += f"   Confidence: {confidence:.2f}\n\n"
+
+            # 添加原始文本
+            text_display = f"Original Text:\n\n{text}\n\n"
+
+            # 使用文本框显示内容
+            text_box = text_display + quad_display
+            ax2.text(0, 1, text_box,
+                     bbox=dict(facecolor='white', edgecolor='black', alpha=0.8),
+                     transform=ax2.transAxes,
+                     fontsize=10,
+                     verticalalignment='top',
+                     family='monospace',
+                     wrap=True)
+
+            # 调整布局
+            plt.tight_layout()
+
+            # 保存可视化结果
+            viz_path = os.path.join(output_dir, f'attention_visualization_{timestamp}.png')
+            plt.savefig(viz_path, bbox_inches='tight', dpi=300)
+            plt.close(fig)
+            plt.close(attention_fig)  # 关闭原始的attention图
+            return viz_path
+
+        except Exception as e:
+            print(f"Warning: Attention visualization failed with error: {str(e)}")
+            return None
+
+    def _select_samples_for_visualization(self, dataset, predictions, labels, k=5):
+        """选择用于可视化的样本"""
+        visualization_samples = []
+
+        # 获取每个类别的样本索引
+        label_indices = {
+            'correct': defaultdict(list),  # 每个标签的正确预测
+            'incorrect': defaultdict(list)  # 每个标签的错误预测
+        }
+
+        # 按照预测正确性和真实标签对样本进行分类
+        for idx, (pred, label) in enumerate(zip(predictions, labels)):
+            if pred == label:
+                label_indices['correct'][label].append(idx)
+            else:
+                label_indices['incorrect'][label].append(idx)
+
+        # 为每个类别选择样本
+        for category in ['correct', 'incorrect']:
+            for label in range(3):  # 0: neutral, 1: positive, 2: negative
+                indices = label_indices[category][label]
+                if indices:
+                    # 按损失值排序选择样本
+                    sample_scores = [
+                        (idx, len(dataset.samples[idx].get('quads', [])))
+                        for idx in indices
+                    ]
+                    # 优先选择有四元组的样本
+                    sample_scores.sort(key=lambda x: x[1], reverse=True)
+                    selected_indices = [idx for idx, _ in sample_scores[:k]]
+
+                    for idx in selected_indices:
+                        sample = dataset.samples[idx]
+                        if sample.get('quads'):  # 只选择有四元组的样本
+                            visualization_samples.append({
+                                'index': idx,
+                                'category': category,
+                                'text': sample['text'],
+                                'quads': sample['quads'],
+                                'true_label': label,
+                                'predicted_label': predictions[idx]
+                            })
+
+        return visualization_samples
+
     @torch.no_grad()
-    def evaluate(self, dataset, batch_size=32):
-        """评估模型性能"""
+    def evaluate(self, dataset, batch_size=32, error_analysis=False,
+                 dimension_reduction=None, plot_embeddings=True,
+                 attention_visualization=False, viz_samples=5):
+        """
+        评估模型性能并进行错误分析
+
+        Args:
+            dataset: 数据集
+            batch_size: 批次大小
+            error_analysis: 是否进行错误分析
+            dimension_reduction: 降维方法 ('tsne', 'umap', 或 None)
+            plot_embeddings: 是否绘制嵌入向量图
+            attention_visualization: 是否进行注意力可视化
+            viz_samples: 每类(正确/错误)选择的可视化样本数
+        """
         dataloader = DataLoader(
             dataset,
             batch_size=batch_size,
-            collate_fn=DataCollatorWithPadding(self.tokenizer) # 改为默认
+            collate_fn=DataCollatorWithPadding(self.tokenizer)
         )
 
         all_preds = []
         all_labels = []
-        all_embeddings = []  # To store embeddings
+        all_losses = []
+        all_embeddings = []
         all_text_pooled = []
+        error_samples = []
 
-        for batch in dataloader:
-            # 将数据移到设备上
+        for batch_idx, batch in enumerate(dataloader):
             batch = {k: v.to(self.device) for k, v in batch.items()}
+            labels = batch.pop('labels')
 
-            outputs = self.model(**batch)
-            preds = torch.argmax(outputs['logits'], dim=1)
+            outputs = self.model(**batch, labels=labels)
+            logits = outputs['logits']
+            preds = torch.argmax(logits, dim=1)
+
+            sample_losses = self._compute_loss(logits, labels)
+
+            if error_analysis:
+                errors = preds != labels
+                for i in range(len(preds)):
+                    if errors[i]:
+                        sample_idx = batch_idx * batch_size + i
+                        if sample_idx < len(dataset.samples):
+                            sample = dataset.samples[sample_idx]
+                            error_info = {
+                                'text': sample['text'],
+                                'true_label': labels[i].item(),
+                                'predicted_label': preds[i].item(),
+                                'loss': sample_losses[i].item(),
+                                'quads': sample.get('quads', []),
+                                'confidence_scores': torch.softmax(logits[i], dim=0).cpu().numpy().tolist()
+                            }
+                            error_samples.append(error_info)
 
             all_preds.extend(preds.cpu().numpy())
-            all_labels.extend(batch['labels'].cpu().numpy())
-            all_embeddings.append(outputs['embeddings'].cpu().numpy())
-            all_text_pooled.append(outputs['text_pooled'].cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+            all_losses.extend(sample_losses.cpu().numpy())
+
+            if 'embeddings' in outputs:
+                all_embeddings.append(outputs['embeddings'].cpu().numpy())
+            if 'text_pooled' in outputs:
+                all_text_pooled.append(outputs['text_pooled'].cpu().numpy())
 
         all_embeddings = np.concatenate(all_embeddings, axis=0)
         all_text_pooled = np.concatenate(all_text_pooled, axis=0)
         all_labels = np.array(all_labels)
 
-        # # Perform dimensionality reduction
-        # from sklearn.manifold import TSNE
-        # import umap.umap_ as umap
-        #
-        # # Choose UMAP or t-SNE
-        # # reducer = umap.UMAP(n_components=2, random_state=42)
-        # reducer = TSNE(n_components=2, random_state=42)
-        # embeddings_2d = reducer.fit_transform(all_embeddings)
-        # text_pooled_2d = reducer.fit_transform(all_text_pooled)
-        #
-        # # Plot the embeddings side by side
-        # fig, ax = plt.subplots(1, 2, figsize=(15, 7))
-        # scatter1 = ax[0].scatter(
-        #     embeddings_2d[:, 0],
-        #     embeddings_2d[:, 1],
-        #     c=all_labels,
-        #     cmap='viridis',
-        #     alpha=0.7
-        # )
-        # ax[0].set_title('Embeddings Before Classification')
-        # ax[0].set_xlabel('Dimension 1')
-        # ax[0].set_ylabel('Dimension 2')
-        #
-        # scatter2 = ax[1].scatter(
-        #     text_pooled_2d[:, 0],
-        #     text_pooled_2d[:, 1],
-        #     c=all_labels,
-        #     cmap='viridis',
-        #     alpha=0.7
-        # )
-        # ax[1].set_title('Text Pooled Outputs')
-        # ax[1].set_xlabel('Dimension 1')
-        # ax[1].set_ylabel('Dimension 2')
-        #
-        # # Add legends
-        # handles, labels = scatter1.legend_elements()
-        # ax[0].legend(handles, ['neutral', 'positive', 'negative'])
-        # ax[1].legend(handles, ['neutral', 'positive', 'negative'])
-        #
-        # plt.tight_layout()
-        # plt.show()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        visualization_paths = {}
 
-        # 计算评估指标
+        # 降维可视化
+        if dimension_reduction and plot_embeddings:
+            try:
+                embeddings_2d = self._perform_dimension_reduction(all_embeddings, method=dimension_reduction)
+                viz_path = self._plot_embeddings(embeddings_2d, all_labels, "Fused Embeddings", timestamp,
+                                                 dimension_reduction)
+                visualization_paths['fused_embeddings'] = viz_path
+
+                text_pooled_2d = self._perform_dimension_reduction(all_text_pooled, method=dimension_reduction)
+                viz_path = self._plot_embeddings(text_pooled_2d, all_labels, "Text Pooled Outputs", timestamp,
+                                                 dimension_reduction)
+                visualization_paths['text_pooled'] = viz_path
+
+            except Exception as e:
+                print(f"Warning: Dimension reduction failed with error: {str(e)}")
+
+        # 注意力可视化
+        attention_viz_paths = []
+        if attention_visualization:
+            print("\nGenerating attention visualizations...")
+            viz_samples = self._select_samples_for_visualization(dataset, all_preds, all_labels, k=viz_samples)
+
+            for sample in viz_samples:
+                # 构建四元组文本
+                quad_parts = []
+                for aspect, opinion, category, polarity, confidence in sample['quads']:
+                    quad_parts.append(
+                        f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category"
+                    )
+                quad_text = " ; ".join(quad_parts)
+
+                label_map = {0: 'neutral', 1: 'positive', 2: 'negative'}
+                viz_path = self._visualize_attention(
+                    text=sample['text'],
+                    quad_text=quad_text,
+                    quads=sample['quads'],  # 传入原始四元组
+                    timestamp=f"{timestamp}_{label_map[sample['true_label']]}_{label_map[sample['predicted_label']]}"
+                )
+                if viz_path:
+                    attention_viz_paths.append({
+                        'path': viz_path,
+                        'category': sample['category'],
+                        'true_label': label_map[sample['true_label']],
+                        'predicted_label': label_map[sample['predicted_label']],
+                        'num_quads': len(sample['quads'])
+                    })
+
+            visualization_paths['attention'] = attention_viz_paths
+            print(f"Generated {len(attention_viz_paths)} attention visualizations")
+
+        # 基础评估指标
         report = classification_report(
             all_labels,
             all_preds,
-            target_names=['neutral', 'positive','negative'],
+            target_names=['neutral', 'positive', 'negative'],
             digits=4
         )
 
         conf_matrix = plot_confusion_matrix(all_labels, all_preds, ['neutral', 'positive', 'negative'])
+
+        # 错误分析
+        if error_analysis and error_samples:
+            error_samples.sort(key=lambda x: x['loss'], reverse=True)
+
+            label_map = {0: 'neutral', 1: 'positive', 2: 'negative'}
+            for sample in error_samples:
+                sample['true_label'] = label_map[sample['true_label']]
+                sample['predicted_label'] = label_map[sample['predicted_label']]
+
+            error_analysis_file = f'output/error_analysis_{timestamp}.json'
+            error_stats = self._compute_error_statistics(error_samples)
+
+            error_analysis_results = {
+                'error_samples': error_samples,
+                'error_statistics': error_stats,
+                'model_performance': {
+                    'classification_report': report,
+                    'total_samples': len(all_labels),
+                    'error_samples': len(error_samples),
+                    'error_rate': len(error_samples) / len(all_labels)
+                },
+                'visualization_paths': visualization_paths
+            }
+
+            with open(error_analysis_file, 'w', encoding='utf-8') as f:
+                json.dump(error_analysis_results, f, ensure_ascii=False, indent=2)
+
+            print(f"\nError analysis saved to: {error_analysis_file}")
+            print(f"Total samples: {len(all_labels)}")
+            print(f"Error samples: {len(error_samples)}")
+            print(f"Error rate: {len(error_samples) / len(all_labels):.2%}")
+            print("\nError Statistics:")
+            print(json.dumps(error_stats, indent=2))
 
         return {
             'classification_report': report,
             'confusion_matrix': conf_matrix,
             'predictions': all_preds,
             'labels': all_labels,
+            'losses': all_losses,
+            'error_samples': error_samples if error_analysis else None,
+            'visualization_paths': visualization_paths
         }
+
+    def _compute_error_statistics(self, error_samples):
+        """计算错误样本的统计信息"""
+        stats = {
+            'confusion_pairs': {},
+            'quad_statistics': {
+                'avg_quads_per_sample': 0,
+                'samples_without_quads': 0,
+                'category_distribution': {}
+            },
+            'high_confidence_errors': 0,
+            'error_types': {
+                'false_positive': 0,
+                'false_negative': 0,
+                'neutral_errors': 0
+            }
+        }
+
+        total_quads = 0
+        for sample in error_samples:
+            error_pair = f"{sample['true_label']}->{sample['predicted_label']}"
+            stats['confusion_pairs'][error_pair] = stats['confusion_pairs'].get(error_pair, 0) + 1
+
+            quads = sample.get('quads', [])
+            total_quads += len(quads)
+            if not quads:
+                stats['quad_statistics']['samples_without_quads'] += 1
+
+            for quad in quads:
+                category = quad[2]
+                stats['quad_statistics']['category_distribution'][category] = \
+                    stats['quad_statistics']['category_distribution'].get(category, 0) + 1
+
+            pred_confidence = max(sample['confidence_scores'])
+            if pred_confidence > 0.9:
+                stats['high_confidence_errors'] += 1
+
+            if sample['true_label'] == 'neutral' and sample['predicted_label'] != 'neutral':
+                stats['error_types']['false_positive'] += 1
+            elif sample['true_label'] != 'neutral' and sample['predicted_label'] == 'neutral':
+                stats['error_types']['false_negative'] += 1
+            else:
+                stats['error_types']['neutral_errors'] += 1
+
+        if error_samples:
+            stats['quad_statistics']['avg_quads_per_sample'] = total_quads / len(error_samples)
+
+        return stats
 
 
 class LossRecorderCallback(TrainerCallback):
@@ -888,7 +1239,10 @@ def train_asqp_model(args, train_data, eval_data):
                                 TextAttentionFusion, QuadOnlyModel, CrossAttentionOnlyModel,
                                 AttentionVariant)
 
-    model = AttentionVariant(config).to(device)
+    # 定义模型保存路径
+    model_save_path = f'./finetuned_models/{args.model_name}/best_model'
+
+    model = QuadAspectEnhancedBertModel(config).to(device)
     tokenizer = AutoTokenizer.from_pretrained(f"../pretrain_models/{args.model_name}")
     # print(model)
 
@@ -926,7 +1280,8 @@ def train_asqp_model(args, train_data, eval_data):
         callbacks=[LossRecorderCallback()]
     )
     trainer.train()
-    return model
+    trainer.save_model(model_save_path)
+    return model_save_path
 
 def seed_everything(seed):
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -945,11 +1300,11 @@ def seed_everything(seed):
 
 def main(args):
     # 加载数据
-    quad_file = f'../output/sentiment_asqp_results_corpus_expand_gpt3.5.json'
+    pos_neg_quad = f'../output/sentiment_asqp_results_corpus_expand_llama405b.json'
+    neu_quad = f'../output/sentiment_asqp_results_corpus_expand_llama8b_neutral.json'
     quad_file_verified = f'../output/quad_results_v1/sentiment_asqp_results_corpus_expand_verified_gpt4o.json'
     corpus_file = '../data/citation_sentiment_corpus_expand.csv'
-    # pos_neg_samples, neutral_samples = load_asqp_data_verified(quad_file_verified, corpus_file)
-    pos_neg_samples, neutral_samples = load_asqp_data(quad_file, corpus_file)
+    pos_neg_samples, neutral_samples = load_asqp_data(pos_neg_quad, neu_quad)
 
     splitter = DatasetSplitter(
         pos_neg_samples=pos_neg_samples,
@@ -973,61 +1328,33 @@ def main(args):
     train_dataset, val_dataset, test_dataset = create_datasets(
         split_data,
         tokenizer,
-        with_asqp=True  # 在这进行tokenize
+        with_asqp=True,  # 在这进行tokenize
+        method='random_words'
     )
 
-    model = train_asqp_model(args, train_dataset, val_dataset)
+    # 训练模型并获取最佳模型路径
+    best_model_path = train_asqp_model(args, train_dataset, val_dataset)
 
-    # 评估模型
-    evaluator = ModelEvaluator(model, tokenizer)
-    
+    best_model_path = f'./finetuned_models/{args.model_name}/best_model'
+    config = QuadAspectEnhancedBertConfig.from_pretrained(best_model_path)
+    best_model = QuadAspectEnhancedBertModel.from_pretrained(best_model_path, config=config)
+    evaluator = ModelEvaluator(best_model, tokenizer)
+
     # print("\nValidation Set Results:")
     # val_results = evaluator.evaluate(val_dataset)
     # print(val_results['classification_report'])
 
-    print("\nTest Set Results:")
-    test_results = evaluator.evaluate(test_dataset)
+    print("\nTest Set Results with Full Analysis:")
+    test_results = evaluator.evaluate(
+        test_dataset,
+        error_analysis=True,
+        dimension_reduction='tsne',  # 或 'umap'
+        plot_embeddings=True,
+        attention_visualization=True,
+        viz_samples=5  # 每类选择5个样本进行注意力可视化
+    )
     print(test_results['classification_report'])
     
-    # # Add visualization code
-    # # 只选择积极或消极的样本(label为1或2的样本)
-    # pos_neg_samples = [i for i, sample in enumerate(test_dataset.samples) if sample['label'] in [1, 2]]
-    # if pos_neg_samples:
-    #     random_idx = random.choice(pos_neg_samples)
-    #     sample = test_dataset.samples[random_idx]
-    #
-    #     text = sample['text']
-    #     quads = sample['quads']
-    #     sentiment = "positive" if sample['label'] == 1 else "negative"
-    #
-    #     # 构建四元组文本
-    #     quad_parts = []
-    #     for aspect, opinion, category, polarity, confidence in quads:
-    #         quad_parts.append(f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category")
-    #     quad_text = " ; ".join(quad_parts)
-    #
-    #     print("\nVisualization Sample:")
-    #     print(f"Text: {text}")
-    #     print(f"Sentiment: {sentiment}")
-    #     print(f"Quads: {quad_text}")
-    #
-    #     # 生成注意力可视化图
-    #     fig = visualize_model_attention(
-    #         model=model,
-    #         tokenizer=tokenizer,
-    #         text=text,
-    #         quad_text=quad_text
-    #     )
-    #
-    #     # 保存可视化结果
-    #     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    #     fig.savefig(f'attention_visualization_{sentiment}_{timestamp}.png',
-    #                 bbox_inches='tight',
-    #                 dpi=300)
-    #     plt.close(fig)
-    # else:
-    #     print("No positive/negative samples found in test set")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

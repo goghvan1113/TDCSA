@@ -8,7 +8,7 @@
 /test/
 /bert/wandb/
 /bert with llama/results/
-bert/multitask_intent.py
-bert/__pycache__/
-bert_with_llama/__pycache__/
-
+/bert/__pycache__/
+/bert_with_llama/__pycache__/
+/llama/checkpoints/
+/bert with llama/finetuned_models/
