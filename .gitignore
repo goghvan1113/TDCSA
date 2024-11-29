@@ -12,3 +12,5 @@
 /bert_with_llama/__pycache__/
 /llama/checkpoints/
 /bert with llama/finetuned_models/
+/baselines/stanford-corenlp/
+/baselines/.vector_cache/

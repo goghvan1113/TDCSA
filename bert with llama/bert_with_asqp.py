@@ -6,6 +6,7 @@ from collections import Counter, defaultdict
 from datetime import datetime
 
 from matplotlib import pyplot as plt, gridspec
+from nbclient.client import timestamp
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
@@ -568,7 +569,7 @@ class AspectAwareDataset(torch.utils.data.Dataset):
 class DatasetSplitter:
     def __init__(self,
                  pos_neg_samples: List[Dict],
-                 neutral_samples: List[str],
+                 neutral_samples: List[Dict],
                  test_size: float = 0.2,
                  val_size: float = 0.1,
                  random_state: int = 42):
@@ -796,28 +797,14 @@ class ModelEvaluator:
         plt.close()
         return save_path
 
-    def _visualize_attention(self, text, quad_text, quads, timestamp, output_dir='attention_viz'):
+    def _visualize_attention(self, text, quad_text, quads, timestamp, output_dir='output'):
         """
-        可视化注意力权重,并在图中展示原始四元组
-
-        Args:
-            text: 原始文本
-            quad_text: 处理后的四元组文本
-            quads: 原始四元组列表
-            timestamp: 时间戳
-            output_dir: 输出目录
+        Visualize attention weights using AttentionVisualization
         """
         try:
             os.makedirs(output_dir, exist_ok=True)
 
-            # 创建一个大图,包含注意力热图和四元组显示
-            fig = plt.figure(figsize=(20, 10))
-
-            # 设置网格布局
-            gs = gridspec.GridSpec(1, 2, width_ratios=[3, 1])
-
-            # 左侧放置注意力热图
-            ax1 = plt.subplot(gs[0])
+            # Get visualization figure directly from AttentionVisualization
             attention_fig = visualize_model_attention(
                 model=self.model,
                 tokenizer=self.tokenizer,
@@ -825,58 +812,16 @@ class ModelEvaluator:
                 quad_text=quad_text
             )
 
-            # 将attention_fig中的内容复制到新图的左侧
-            for ax_old in attention_fig.axes:
-                # 复制热图
-                for im in ax_old.images:
-                    ax1.imshow(im.get_array(), cmap=im.get_cmap())
-                # 复制标签和刻度
-                ax1.set_xticks(ax_old.get_xticks())
-                ax1.set_xticklabels(ax_old.get_xticklabels(), rotation=45, ha='right')
-                ax1.set_yticks(ax_old.get_yticks())
-                ax1.set_yticklabels(ax_old.get_yticklabels())
-
-            ax1.set_title("Attention Weights Heatmap")
-
-            # 右侧显示原始四元组
-            ax2 = plt.subplot(gs[1])
-            ax2.axis('off')  # 隐藏坐标轴
-
-            # 构建四元组展示文本
-            quad_display = "Original Quadruples:\n\n"
-            for i, (aspect, opinion, category, polarity, confidence) in enumerate(quads, 1):
-                quad_display += f"{i}. Aspect: {aspect}\n"
-                quad_display += f"   Opinion: {opinion}\n"
-                quad_display += f"   Category: {category}\n"
-                quad_display += f"   Polarity: {polarity}\n"
-                quad_display += f"   Confidence: {confidence:.2f}\n\n"
-
-            # 添加原始文本
-            text_display = f"Original Text:\n\n{text}\n\n"
-
-            # 使用文本框显示内容
-            text_box = text_display + quad_display
-            ax2.text(0, 1, text_box,
-                     bbox=dict(facecolor='white', edgecolor='black', alpha=0.8),
-                     transform=ax2.transAxes,
-                     fontsize=10,
-                     verticalalignment='top',
-                     family='monospace',
-                     wrap=True)
-
-            # 调整布局
-            plt.tight_layout()
-
-            # 保存可视化结果
+            # Save visualization
             viz_path = os.path.join(output_dir, f'attention_visualization_{timestamp}.png')
-            plt.savefig(viz_path, bbox_inches='tight', dpi=300)
-            plt.close(fig)
-            plt.close(attention_fig)  # 关闭原始的attention图
+            attention_fig.savefig(viz_path, bbox_inches='tight', dpi=300)
+            plt.close(attention_fig)
             return viz_path
 
         except Exception as e:
             print(f"Warning: Attention visualization failed with error: {str(e)}")
             return None
+
 
     def _select_samples_for_visualization(self, dataset, predictions, labels, k=5):
         """选择用于可视化的样本"""
@@ -1147,6 +1092,41 @@ class ModelEvaluator:
 
         return stats
 
+    @torch.no_grad()
+    def visualize_custom_input(self, output_dir='case'):
+        """
+        Visualize attention weights for custom text and quad input.
+
+        Args:
+            output_dir (str, optional): Output directory. Defaults to 'output'.
+        """
+        samples = []
+        with open('output/case_err_study.json', encoding='utf-8') as f:
+            data = json.load(f)
+
+        for item in data:
+            samples.append({
+                'text': item['text'],
+                'overall_sentiment': item['overall_sentiment'],
+                'quads': item['sentiment_quadruples']  # 修改为sentiment_quadruples
+            })
+        for idx, sample in enumerate(samples[-1:]):
+            quad_parts = []
+            for aspect, opinion, category, polarity, confidence in sample['quads']:
+                quad_parts.append(
+                    f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category"
+                )
+            quad_text = " ; ".join(quad_parts)
+
+            timestamp1 = datetime.now().strftime('%Y%m%d_%H%M%S')
+            self._visualize_attention(
+                text=sample['text'],
+                quad_text=quad_text,
+                quads=sample['quads'],  # 传入原始四元组
+                timestamp=f'{timestamp1}_{idx}',
+                output_dir=output_dir
+            )
+
 
 class LossRecorderCallback(TrainerCallback):
     def __init__(self):
@@ -1229,7 +1209,7 @@ def train_asqp_model(args, train_data, eval_data):
         focal_alpha=0.8,
         focal_gamma=2.0,
         label_smoothing=0.0,
-        multitask=True,
+        multitask=False,
         backbone_model=args.model_name,
         num_categories=5 # 类别数量
     )
@@ -1283,6 +1263,7 @@ def train_asqp_model(args, train_data, eval_data):
     trainer.save_model(model_save_path)
     return model_save_path
 
+
 def seed_everything(seed):
     os.environ['PYTHONHASHSEED'] = str(seed)
     os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'  # 设置CUDA工作区配置
@@ -1329,13 +1310,14 @@ def main(args):
         split_data,
         tokenizer,
         with_asqp=True,  # 在这进行tokenize
-        method='random_words'
+        method='original' # ['random_mask', 'random_words', 'random_polar', 'empty', 'original', 'random_multi']
     )
+    # mask 0.9385 0.9718 words 0.9507  0.97 polar 0.9524
 
     # 训练模型并获取最佳模型路径
     best_model_path = train_asqp_model(args, train_dataset, val_dataset)
 
-    best_model_path = f'./finetuned_models/{args.model_name}/best_model'
+    # best_model_path = f'./finetuned_models/{args.model_name}/best_model'
     config = QuadAspectEnhancedBertConfig.from_pretrained(best_model_path)
     best_model = QuadAspectEnhancedBertModel.from_pretrained(best_model_path, config=config)
     evaluator = ModelEvaluator(best_model, tokenizer)
@@ -1345,20 +1327,21 @@ def main(args):
     # print(val_results['classification_report'])
 
     print("\nTest Set Results with Full Analysis:")
+    # evaluator.visualize_custom_input()
     test_results = evaluator.evaluate(
         test_dataset,
-        error_analysis=True,
+        error_analysis=False,
         dimension_reduction='tsne',  # 或 'umap'
-        plot_embeddings=True,
-        attention_visualization=True,
-        viz_samples=5  # 每类选择5个样本进行注意力可视化
+        plot_embeddings=False,
+        attention_visualization=False,
+        viz_samples=3  # 每类选择5个样本进行注意力可视化
     )
     print(test_results['classification_report'])
     
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--seed", type=int, default=41)
     parser.add_argument("--model_name", type=str, default="roberta-llama3.1405B-twitter-sentiment")
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--learning_rate", type=float, default=2e-5)

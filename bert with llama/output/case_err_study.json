@@ -1,0 +1,195 @@
+[
+  {
+          "text": "With these linguistic annotations, we expect the LABTG to address two traditional issues of standard phrase-based SMT in a more effective manner.",
+          "overall_sentiment": "negative",
+          "sentiment_quadruples": [
+              [
+                  "LABTG",
+                  "more effective",
+                  "PERFORMANCE",
+                  "positive",
+                  0.95
+              ],
+              [
+                  "standard phrase-based SMT",
+                  "traditional issues",
+                  "LIMITATION",
+                  "negative",
+                  0.92
+              ]
+          ]
+  },
+  {
+          "text": "This averaging effect has been shown to reduce overfitting and produce much more stable results.",
+          "overall_sentiment": "positive",
+          "sentiment_quadruples": [
+              [
+                  "averaging effect",
+                  "reduce overfitting",
+                  "PERFORMANCE",
+                  "positive",
+                  0.92
+              ],
+              [
+                  "results",
+                  "stable",
+                  "PERFORMANCE",
+                  "positive",
+                  0.95
+              ]
+          ]
+  },
+  {
+        "text": "In machine translation, the rankings from the automatic BLEU method have been shown to correlate well with human evaluation, and it has been widely used since and has even been adapted for summarization.",
+        "overall_sentiment": "positive",
+        "sentiment_quadruples": [
+            [
+                "BLEU method",
+                "correlate well",
+                "METHODOLOGY",
+                "positive",
+                0.92
+            ],
+            [
+                "BLEU method",
+                "widely used",
+                "APPLICABILITY",
+                "positive",
+                0.95
+            ]
+        ]
+    },
+  {
+        "text": "In, the authors use the transcripts of debates from the US Congress to automatically classify speeches as supporting or opposing a given topic by taking advantage of the voting records of the speakers.",
+        "overall_sentiment": "neutral",
+        "sentiment_quadruples": [
+            [
+                "transcripts of debates from the US Congress",
+                "to automatically classify speeches",
+                "METHODOLOGY",
+                "neutral",
+                0.95
+            ],
+            [
+                "voting records of the speakers",
+                "supporting or opposing a given topic",
+                "METHODOLOGY",
+                "neutral",
+                0.9
+            ]
+        ]
+  },
+  {
+        "text": "One of the best efforts to quantify the performance of a term-recognition system does so only for one processing stage, leaving unassessed the text-to-output performance of the system.",
+        "overall_sentiment": "positive",
+        "sentiment_quadruples": [
+            [
+                "efforts",
+                "one of the best",
+                "PERFORMANCE",
+                "positive",
+                0.95
+            ],
+            [
+                "performance of the system",
+                "leaving unassessed",
+                "LIMITATION",
+                "negative",
+                0.9
+            ]
+        ]
+  },
+  {
+        "text": "Due to its manageable behavior, Kademlia and its variant Kad use iterative routing in their design.",
+        "overall_sentiment": "positive",
+        "sentiment_quadruples": [
+            [
+                "behavior",
+                "manageable",
+                "PERFORMANCE",
+                "positive",
+                0.85
+            ],
+            [
+                "design",
+                "iterative routing",
+                "METHODOLOGY",
+                "positive",
+                0.8
+            ]
+        ]
+  },
+  {
+        "text": "Our syntactic-relation-based thesaurus is based on the method proposed by Hindle, although Hindle did not apply it to information retrieval.",
+        "overall_sentiment": "negative",
+        "sentiment_quadruples": [
+            [
+                "method",
+                "proposed",
+                "METHODOLOGY",
+                "positive",
+                0.85
+            ],
+            [
+                "information retrieval application",
+                "did not apply",
+                "APPLICABILITY",
+                "negative",
+                0.8
+            ]
+        ]
+    },
+  {
+      "text": "These methods go beyond the original IBM machine translation models, by allowing multi-word units in one language to be translated directly into phrases in another language.",
+        "overall_sentiment": "negative",
+        "sentiment_quadruples": [
+            [
+                "methods",
+                "go beyond",
+                "METHODOLOGY",
+                "positive",
+                0.85
+            ]
+        ]
+    },
+  {
+        "text": "This approach took inspiration from the pioneering work by Brown, but it is also fundamentally different, because instead of grouping similar senses together, the CoreLex approach groups together words according to all of their senses.",
+        "overall_sentiment": "positive",
+        "sentiment_quadruples": [
+            [
+                "CoreLex approach",
+                "fundamentally different",
+                "INNOVATION",
+                "positive",
+                0.85
+            ],
+            [
+                "pioneering work",
+                "pioneering",
+                "INNOVATION",
+                "positive",
+                0.92
+            ]
+        ]
+    },
+   {
+        "text": "The size of the development set used to generate 1 and 2 compensates the tendency of the unsmoothed MERT algorithm to overfit by providing a high ratio between number of variables and number of parameters to be estimated.",
+        "overall_sentiment": "negative",
+        "sentiment_quadruples": [
+            [
+                "unsmoothed MERT algorithm",
+                "to overfit",
+                "LIMITATION",
+                "negative",
+                0.85
+            ],
+            [
+                "size of the development set",
+                "compensates",
+                "METHODOLOGY",
+                "positive",
+                0.8
+            ]
+        ]
+    }
+]

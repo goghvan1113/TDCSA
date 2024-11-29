@@ -1,0 +1,1172 @@
+{
+  "error_samples": [
+    {
+      "text": "These methods go beyond the original IBM machine translation models  , by allowing multi-word units   in one language to be translated directly into phrases in another language.",
+      "true_label": "negative",
+      "predicted_label": "neutral",
+      "loss": 6.6436614990234375,
+      "quads": [
+        [
+          "methods",
+          "go beyond",
+          "METHODOLOGY",
+          "positive",
+          0.85
+        ]
+      ],
+      "confidence_scores": [
+        0.6299562454223633,
+        0.3687414824962616,
+        0.0013022501952946186
+      ]
+    },
+    {
+      "text": "With these linguistic annotations, we expect the LABTG to address two traditional issues of standard phrase-based SMT   in a more effective manner.",
+      "true_label": "negative",
+      "predicted_label": "positive",
+      "loss": 6.488548755645752,
+      "quads": [
+        [
+          "LABTG",
+          "more effective",
+          "PERFORMANCE",
+          "positive",
+          0.95
+        ],
+        [
+          "standard phrase-based SMT",
+          "traditional issues",
+          "LIMITATION",
+          "negative",
+          0.92
+        ]
+      ],
+      "confidence_scores": [
+        0.09962005913257599,
+        0.8988592028617859,
+        0.0015207544201985002
+      ]
+    },
+    {
+      "text": "This approach took inspiration from the pioneering work by  , but it is also fundamentally different, because instead of grouping similar senses together, the CoreLex approach groups together words according to all of their senses.",
+      "true_label": "positive",
+      "predicted_label": "negative",
+      "loss": 5.682916164398193,
+      "quads": [
+        [
+          "CoreLex approach",
+          "fundamentally different",
+          "INNOVATION",
+          "positive",
+          0.85
+        ],
+        [
+          "pioneering work",
+          "pioneering",
+          "INNOVATION",
+          "positive",
+          0.92
+        ]
+      ],
+      "confidence_scores": [
+        0.18694832921028137,
+        0.0034036177676171064,
+        0.8096480369567871
+      ]
+    },
+    {
+      "text": "One of the best efforts to quantify the performance of a term-recognition system   does so only for one processing stage, leaving unassessed the text-to-output performance of the system.",
+      "true_label": "positive",
+      "predicted_label": "negative",
+      "loss": 5.437862873077393,
+      "quads": [
+        [
+          "efforts",
+          "one of the best",
+          "PERFORMANCE",
+          "positive",
+          0.95
+        ],
+        [
+          "performance of the system",
+          "leaving unassessed",
+          "LIMITATION",
+          "negative",
+          0.9
+        ]
+      ],
+      "confidence_scores": [
+        0.12245005369186401,
+        0.00434876699000597,
+        0.8732012510299683
+      ]
+    },
+    {
+      "text": "The size of the development set used to generate 1 and 2   compensates the tendency of the unsmoothed MERT algorithm to overfit   by providing a high ratio between number of variables and number of parameters to be estimated.",
+      "true_label": "negative",
+      "predicted_label": "neutral",
+      "loss": 5.250062942504883,
+      "quads": [
+        [
+          "unsmoothed MERT algorithm",
+          "to overfit",
+          "LIMITATION",
+          "negative",
+          0.85
+        ],
+        [
+          "size of the development set",
+          "compensates",
+          "METHODOLOGY",
+          "positive",
+          0.8
+        ]
+      ],
+      "confidence_scores": [
+        0.6653085350990295,
+        0.32944419980049133,
+        0.005247189663350582
+      ]
+    },
+    {
+      "text": "This strategy is commonly used in MT evaluation, because of BLEUs well-known problems with documents of small size  .",
+      "true_label": "negative",
+      "predicted_label": "positive",
+      "loss": 4.987369537353516,
+      "quads": [
+        [
+          "BLEU",
+          "well-known problems",
+          "LIMITATION",
+          "negative",
+          0.85
+        ],
+        [
+          "strategy",
+          "commonly used",
+          "METHODOLOGY",
+          "positive",
+          0.78
+        ]
+      ],
+      "confidence_scores": [
+        0.45556730031967163,
+        0.5376091003417969,
+        0.006823590025305748
+      ]
+    },
+    {
+      "text": "Chinese word segmentation is a well-known problem that has been studied extensively   and it is known that human agreement is relatively low.",
+      "true_label": "negative",
+      "predicted_label": "positive",
+      "loss": 4.120201587677002,
+      "quads": [
+        [
+          "human agreement",
+          "relatively low",
+          "PERFORMANCE",
+          "negative",
+          0.85
+        ],
+        [
+          "Chinese word segmentation",
+          "well-known problem",
+          "LIMITATION",
+          "negative",
+          0.8
+        ]
+      ],
+      "confidence_scores": [
+        0.23479270935058594,
+        0.7489659786224365,
+        0.01624124124646187
+      ]
+    },
+    {
+      "text": "In this work we use the averaged perceptron algorithm   since it is an online algorithm much simpler and orders of magnitude faster than Boosting and MaxEnt methods.",
+      "true_label": "negative",
+      "predicted_label": "positive",
+      "loss": 3.466931104660034,
+      "quads": [
+        [
+          "averaged perceptron algorithm",
+          "simpler",
+          "METHODOLOGY",
+          "positive",
+          0.85
+        ],
+        [
+          "averaged perceptron algorithm",
+          "orders of magnitude faster",
+          "PERFORMANCE",
+          "positive",
+          0.92
+        ]
+      ],
+      "confidence_scores": [
+        0.09442374110221863,
+        0.8743635416030884,
+        0.03121267259120941
+      ]
+    },
+    {
+      "text": "reported a better average motion ratio, but the signals also had substantially better SNR  .",
+      "true_label": "negative",
+      "predicted_label": "positive",
+      "loss": 3.439293622970581,
+      "quads": [
+        [
+          "average motion ratio",
+          "better",
+          "PERFORMANCE",
+          "positive",
+          0.85
+        ],
+        [
+          "SNR",
+          "substantially better",
+          "PERFORMANCE",
+          "positive",
+          0.92
+        ]
+      ],
+      "confidence_scores": [
+        0.13538864254951477,
+        0.8325240612030029,
+        0.03208734095096588
+      ]
+    },
+    {
+      "text": "evaluations on the widely used WSJ corpus of the Penn Treebank   show that the accuracy of these parsers still lags behind the state-of-theart.",
+      "true_label": "positive",
+      "predicted_label": "negative",
+      "loss": 3.266678810119629,
+      "quads": [
+        [
+          "parsers",
+          "lags behind the state-of-the-art",
+          "PERFORMANCE",
+          "negative",
+          0.95
+        ],
+        [
+          "WSJ corpus of the Penn Treebank",
+          "widely used",
+          "APPLICABILITY",
+          "positive",
+          0.92
+        ]
+      ],
+      "confidence_scores": [
+        0.04861956089735031,
+        0.038132864981889725,
+        0.9132475256919861
+      ]
+    },
+    {
+      "text": "Compared to a basic treebank grammar  , the grammars of highaccuracy parsers weaken independence assumptions by splitting grammar symbols and rules with either lexical   or nonlexical   conditioning information.",
+      "true_label": "negative",
+      "predicted_label": "neutral",
+      "loss": 3.263348340988159,
+      "quads": [
+        [
+          "independence assumptions",
+          "weaken",
+          "METHODOLOGY",
+          "negative",
+          0.85
+        ],
+        [
+          "grammars of high-accuracy parsers",
+          "weaken",
+          "PERFORMANCE",
+          "negative",
+          0.8
+        ]
+      ],
+      "confidence_scores": [
+        0.8814135193824768,
+        0.08032635599374771,
+        0.038260072469711304
+      ]
+    },
+    {
+      "text": "It has the advantage of naturally capturing local reorderings and is shown to outperform word-based machine translation  .",
+      "true_label": "negative",
+      "predicted_label": "positive",
+      "loss": 2.751852035522461,
+      "quads": [
+        [
+          "local reorderings",
+          "naturally capturing",
+          "METHODOLOGY",
+          "positive",
+          0.95
+        ],
+        [
+          "machine translation",
+          "outperform",
+          "PERFORMANCE",
+          "positive",
+          0.92
+        ]
+      ],
+      "confidence_scores": [
+        0.032410044223070145,
+        0.903780460357666,
+        0.06380957365036011
+      ]
+    },
+    {
+      "text": "1 Motivation A major component in phrase-based statistical Machine translation     is the table of conditional probabilities of phrase translation pairs.",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 2.6473286151885986,
+      "quads": [
+        [
+          "phrase-based statistical Machine translation",
+          "major",
+          "METHODOLOGY",
+          "positive",
+          0.85
+        ]
+      ],
+      "confidence_scores": [
+        0.9291455149650574,
+        0.07084020227193832,
+        1.4252616892918013e-05
+      ]
+    },
+    {
+      "text": "As agreement measure we choose the Kappa coefficient   , the agreement measure predominantly used in natural language processing research  .",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 2.5826828479766846,
+      "quads": [
+        [
+          "Kappa coefficient",
+          "predominantly used",
+          "METHODOLOGY",
+          "positive",
+          0.85
+        ],
+        [
+          "Kappa coefficient",
+          "choose",
+          "METHODOLOGY",
+          "positive",
+          0.8
+        ]
+      ],
+      "confidence_scores": [
+        0.9244171977043152,
+        0.0755709856748581,
+        1.1750615158234723e-05
+      ]
+    },
+    {
+      "text": "In a later study, Och and Ney   present a loglinear combination of the HMM and IBM Model 4 that produces better alignments than either of those.",
+      "true_label": "positive",
+      "predicted_label": "negative",
+      "loss": 2.5614874362945557,
+      "quads": [
+        [
+          "loglinear combination of the HMM and IBM Model 4",
+          "produces better alignments",
+          "METHODOLOGY",
+          "positive",
+          0.92
+        ],
+        [
+          "alignments",
+          "better",
+          "PERFORMANCE",
+          "positive",
+          0.95
+        ]
+      ],
+      "confidence_scores": [
+        0.19891729950904846,
+        0.0771898403763771,
+        0.7238929271697998
+      ]
+    },
+    {
+      "text": "ch   has described an ef cient exact one-dimensional error minimization technique for a similar search problem in machine translation",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 2.492203712463379,
+      "quads": [
+        [
+          "error minimization technique",
+          "ef cient",
+          "METHODOLOGY",
+          "positive",
+          0.92
+        ],
+        [
+          "one-dimensional error minimization technique",
+          "exact",
+          "PERFORMANCE",
+          "positive",
+          0.9
+        ]
+      ],
+      "confidence_scores": [
+        0.9172530174255371,
+        0.08272745460271835,
+        1.956623964360915e-05
+      ]
+    },
+    {
+      "text": "akov and Hearst   solved relational similarity problems using the Web as a corpus",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 2.307096481323242,
+      "quads": [
+        [
+          "Web as a corpus",
+          "solved",
+          "METHODOLOGY",
+          "positive",
+          0.92
+        ],
+        [
+          "relational similarity problems",
+          "solved",
+          "PERFORMANCE",
+          "positive",
+          0.9
+        ]
+      ],
+      "confidence_scores": [
+        0.9004175066947937,
+        0.09954987466335297,
+        3.264403130742721e-05
+      ]
+    },
+    {
+      "text": "he default training set of Penn Treebank   was used for the parser because the domain and style of those texts actually matches fairly well with the domain and style of the texts on which a reading level predictor for second language learners might be used",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 2.1761512756347656,
+      "quads": [
+        [
+          "domain and style of the texts",
+          "matches fairly well",
+          "APPLICABILITY",
+          "positive",
+          0.85
+        ],
+        [
+          "training set of Penn Treebank",
+          "used",
+          "METHODOLOGY",
+          "positive",
+          0.78
+        ]
+      ],
+      "confidence_scores": [
+        0.8865036368370056,
+        0.1134774386882782,
+        1.8867749531636946e-05
+      ]
+    },
+    {
+      "text": "7.1 Interand Intra-annotator agreement We measured pairwise agreement among annotators usingthekappacoefficient whichiswidelyused in computational linguistics for measuring agreement in category judgments  .",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 2.0966062545776367,
+      "quads": [
+        [
+          "kappa coefficient",
+          "widely used",
+          "METHODOLOGY",
+          "positive",
+          0.85
+        ]
+      ],
+      "confidence_scores": [
+        0.8771231174468994,
+        0.1228727176785469,
+        4.157748207944678e-06
+      ]
+    },
+    {
+      "text": "his normal form allows simpler algorithm descriptions than the normal forms used by Wu   and Melamed  ",
+      "true_label": "negative",
+      "predicted_label": "neutral",
+      "loss": 1.6924291849136353,
+      "quads": [
+        [
+          "normal form",
+          "simpler",
+          "METHODOLOGY",
+          "positive",
+          0.85
+        ],
+        [
+          "normal forms used by Wu and Melamed",
+          "allows simpler algorithm descriptions than",
+          "METHODOLOGY",
+          "negative",
+          0.8
+        ]
+      ],
+      "confidence_scores": [
+        0.751542866230011,
+        0.06438525766134262,
+        0.1840718388557434
+      ]
+    },
+    {
+      "text": "This tolerant search uses the well known concept of Levenshtein distance in order to obtain the most similar string for the given prefix   for more details).",
+      "true_label": "neutral",
+      "predicted_label": "positive",
+      "loss": 1.6675641536712646,
+      "quads": [
+        [
+          "Levenshtein distance",
+          "well known concept",
+          "METHODOLOGY",
+          "neutral",
+          0.9
+        ],
+        [
+          "prefix",
+          "given prefix",
+          "METHODOLOGY",
+          "neutral",
+          0.8
+        ]
+      ],
+      "confidence_scores": [
+        0.188706174492836,
+        0.8112056851387024,
+        8.820253424346447e-05
+      ]
+    },
+    {
+      "text": "  presented a history-based generation model to overcome some of the inappropriate independence assumptions in the basic generation model of  .",
+      "true_label": "negative",
+      "predicted_label": "neutral",
+      "loss": 1.651567816734314,
+      "quads": [
+        [
+          "independence assumptions",
+          "inappropriate",
+          "LIMITATION",
+          "negative",
+          0.85
+        ],
+        [
+          "history-based generation model",
+          "overcome",
+          "METHODOLOGY",
+          "positive",
+          0.78
+        ]
+      ],
+      "confidence_scores": [
+        0.6606974601745605,
+        0.147553488612175,
+        0.19174905121326447
+      ]
+    },
+    {
+      "text": "Ramshaw and Marcus   successflflly applied Eric Brill's transformation-based learning method to the chunking problem.",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 1.5456098318099976,
+      "quads": [
+        [
+          "transformation-based learning method",
+          "successfully applied",
+          "METHODOLOGY",
+          "positive",
+          0.92
+        ],
+        [
+          "chunking problem",
+          "successfully applied",
+          "PERFORMANCE",
+          "positive",
+          0.9
+        ]
+      ],
+      "confidence_scores": [
+        0.7867770195007324,
+        0.21318182349205017,
+        4.1213374061044306e-05
+      ]
+    },
+    {
+      "text": "Our syntactic-relation-based thesaurus is based on the method proposed by Hindle  , although Hindle did not apply it to information retrieval.",
+      "true_label": "negative",
+      "predicted_label": "neutral",
+      "loss": 1.540858268737793,
+      "quads": [
+        [
+          "method",
+          "proposed",
+          "METHODOLOGY",
+          "positive",
+          0.85
+        ],
+        [
+          "information retrieval application",
+          "did not apply",
+          "APPLICABILITY",
+          "negative",
+          0.8
+        ]
+      ],
+      "confidence_scores": [
+        0.7851927280426025,
+        0.0006100545288063586,
+        0.21419717371463776
+      ]
+    },
+    {
+      "text": "It also differs from previous proposals on lexical acquisition using statistical measures such as   which either deny the prior existence of linguistic knowledge or use linguistic knowledge in ad hoc ways.",
+      "true_label": "negative",
+      "predicted_label": "neutral",
+      "loss": 1.449392318725586,
+      "quads": [
+        [
+          "previous proposals on lexical acquisition",
+          "deny the prior existence of linguistic knowledge",
+          "METHODOLOGY",
+          "negative",
+          0.85
+        ],
+        [
+          "use of linguistic knowledge",
+          "in ad hoc ways",
+          "LIMITATION",
+          "negative",
+          0.9
+        ]
+      ],
+      "confidence_scores": [
+        0.7639186978340149,
+        0.0013684817822650075,
+        0.2347128689289093
+      ]
+    },
+    {
+      "text": "Our training and test corpora, for instance, are lessthan-gargantuan compared to such collections as the Penn Treebank \\ .",
+      "true_label": "negative",
+      "predicted_label": "neutral",
+      "loss": 1.236160397529602,
+      "quads": [
+        [
+          "training and test corpora",
+          "lessthan-gargantuan",
+          "LIMITATION",
+          "negative",
+          0.85
+        ],
+        [
+          "Penn Treebank",
+          "gargantuan",
+          "PERFORMANCE",
+          "positive",
+          0.8
+        ]
+      ],
+      "confidence_scores": [
+        0.7027085423469543,
+        0.006793985143303871,
+        0.29049748182296753
+      ]
+    },
+    {
+      "text": "The prognosis of FVPTC in our study was excellent, similar to the results of previous studies  , and FVPTC is known to have less frequent locoregional recurrence than conventional PTC  , although there…",
+      "true_label": "negative",
+      "predicted_label": "positive",
+      "loss": 1.2132407426834106,
+      "quads": [
+        [
+          "prognosis of FVPTC",
+          "excellent",
+          "PERFORMANCE",
+          "positive",
+          0.95
+        ],
+        [
+          "locoregional recurrence",
+          "less frequent",
+          "PERFORMANCE",
+          "positive",
+          0.92
+        ]
+      ],
+      "confidence_scores": [
+        0.10522530227899551,
+        0.5975422859191895,
+        0.297232449054718
+      ]
+    },
+    {
+      "text": "Some recent work on incremental parsing   showed another way to handle this problem.",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 1.1441857814788818,
+      "quads": [
+        [
+          "recent work on incremental parsing",
+          "showed another way",
+          "METHODOLOGY",
+          "positive",
+          0.85
+        ]
+      ],
+      "confidence_scores": [
+        0.6814640164375305,
+        0.3184831440448761,
+        5.2921393944416195e-05
+      ]
+    },
+    {
+      "text": "Moreover, although clinical results of tension-band wiring are satisfactory in the short term  .",
+      "true_label": "negative",
+      "predicted_label": "positive",
+      "loss": 1.0959582328796387,
+      "quads": [
+        [
+          "clinical results",
+          "satisfactory",
+          "PERFORMANCE",
+          "positive",
+          0.85
+        ],
+        [
+          "tension-band wiring",
+          "satisfactory in the short term",
+          "LIMITATION",
+          "negative",
+          0.8
+        ]
+      ],
+      "confidence_scores": [
+        0.13985733687877655,
+        0.5259234309196472,
+        0.33421921730041504
+      ]
+    },
+    {
+      "text": "With the in-depth study of opinion mining, researchers committed their efforts for more accurate results: the research of sentiment summarization  , domain transfer problem of the sentiment analysis   and finegrained opinion mining   are the main branches of the research of opinion mining.",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 1.0741095542907715,
+      "quads": [
+        [
+          "research of sentiment summarization",
+          "in-depth",
+          "PERFORMANCE",
+          "positive",
+          0.85
+        ],
+        [
+          "research of opinion mining",
+          "main branches",
+          "INNOVATION",
+          "positive",
+          0.9
+        ]
+      ],
+      "confidence_scores": [
+        0.658381998538971,
+        0.34160181879997253,
+        1.6205109204747714e-05
+      ]
+    },
+    {
+      "text": "Most early work assumed some limited amount of supervision   for this task, recent work has shown that unsupervised methods can perform on-par and often above early supervised methods  .",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 1.0340421199798584,
+      "quads": [
+        [
+          "unsupervised methods",
+          "perform on-par and often above",
+          "PERFORMANCE",
+          "positive",
+          0.92
+        ],
+        [
+          "unsupervised methods",
+          "can perform on-par",
+          "METHODOLOGY",
+          "positive",
+          0.9
+        ]
+      ],
+      "confidence_scores": [
+        0.5294442176818848,
+        0.35556676983833313,
+        0.11498897522687912
+      ]
+    },
+    {
+      "text": "Lately, interesting reports have been issued on prognostic significance of beta-catenin nuclear expression in colon cancers  .",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 0.9684588313102722,
+      "quads": [
+        [
+          "reports",
+          "interesting",
+          "INNOVATION",
+          "positive",
+          0.9
+        ],
+        [
+          "beta-catenin nuclear expression",
+          "prognostic significance",
+          "PERFORMANCE",
+          "positive",
+          0.85
+        ]
+      ],
+      "confidence_scores": [
+        0.620212733745575,
+        0.3796677589416504,
+        0.00011946443555643782
+      ]
+    },
+    {
+      "text": "In the classic work on SMT,Brownandhiscolleagues atIBMintroduced the notion of alignment between a sentence f and its translation e and used it in the development of translation models  .",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 0.9615335464477539,
+      "quads": [
+        [
+          "notion of alignment",
+          "classic",
+          "INNOVATION",
+          "positive",
+          0.85
+        ],
+        [
+          "translation models",
+          "development",
+          "METHODOLOGY",
+          "positive",
+          0.8
+        ]
+      ],
+      "confidence_scores": [
+        0.6176690459251404,
+        0.38230612874031067,
+        2.4827893867040984e-05
+      ]
+    },
+    {
+      "text": "In Statistical Machine Translation  , recent work shows that WSD helps translation quality when the WSD system directly uses translation candidates as sense inventories  .",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 0.9496783018112183,
+      "quads": [
+        [
+          "WSD",
+          "helps",
+          "PERFORMANCE",
+          "positive",
+          0.92
+        ],
+        [
+          "WSD system",
+          "directly uses translation candidates",
+          "METHODOLOGY",
+          "positive",
+          0.89
+        ]
+      ],
+      "confidence_scores": [
+        0.6130606532096863,
+        0.38686543703079224,
+        7.387035293504596e-05
+      ]
+    },
+    {
+      "text": "Note that our result on Dataset A is as strong as that obtained by Pang and Lee   via their subjectivity summarization algorithm, which retains only the subjective portions of a document.",
+      "true_label": "negative",
+      "predicted_label": "neutral",
+      "loss": 0.9225265383720398,
+      "quads": [
+        [
+          "result",
+          "as strong",
+          "PERFORMANCE",
+          "positive",
+          0.85
+        ]
+      ],
+      "confidence_scores": [
+        0.5956633687019348,
+        0.006823220290243626,
+        0.3975134491920471
+      ]
+    },
+    {
+      "text": "Recently, graph-based methods have proved useful for a number of NLP and IR tasks such as document re-ranking in ad hoc IR   and analyzing sentiments in text  .",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 0.805081307888031,
+      "quads": [
+        [
+          "graph-based methods",
+          "useful",
+          "METHODOLOGY",
+          "positive",
+          0.92
+        ],
+        [
+          "graph-based methods",
+          "proved useful",
+          "PERFORMANCE",
+          "positive",
+          0.95
+        ]
+      ],
+      "confidence_scores": [
+        0.5529388785362244,
+        0.4470515549182892,
+        9.580269761499949e-06
+      ]
+    },
+    {
+      "text": "These genes of the five strain comparison overlap to some extent but not completely with those genes found by us for a two strain comparison [|pone.0154531.ref076|].",
+      "true_label": "negative",
+      "predicted_label": "neutral",
+      "loss": 0.7859024405479431,
+      "quads": [
+        [
+          "overlap",
+          "not completely",
+          "PERFORMANCE",
+          "negative",
+          0.85
+        ],
+        [
+          "comparison",
+          "to some extent",
+          "METHODOLOGY",
+          "negative",
+          0.8
+        ]
+      ],
+      "confidence_scores": [
+        0.5434872508049011,
+        0.0008044861606322229,
+        0.45570826530456543
+      ]
+    },
+    {
+      "text": "We also show that integrating our case prediction model improves the quality of translation according to BLEU  g2 and human evaluation.",
+      "true_label": "positive",
+      "predicted_label": "neutral",
+      "loss": 0.7709051370620728,
+      "quads": [
+        [
+          "case prediction model",
+          "improves",
+          "METHODOLOGY",
+          "positive",
+          0.96
+        ],
+        [
+          "quality of translation",
+          "improves",
+          "PERFORMANCE",
+          "positive",
+          0.94
+        ]
+      ],
+      "confidence_scores": [
+        0.537143886089325,
+        0.4625941812992096,
+        0.0002619879087433219
+      ]
+    },
+    {
+      "text": "For comparison purposes, we revisit Haghighi and Kleins   fully-generative Bayesian model for unsupervised coreference resolution, discuss its potential weaknesses and consequently propose three modifications to their model.",
+      "true_label": "negative",
+      "predicted_label": "neutral",
+      "loss": 0.7393950819969177,
+      "quads": [
+        [
+          "Bayesian model",
+          "potential weaknesses",
+          "LIMITATION",
+          "negative",
+          0.85
+        ],
+        [
+          "modifications",
+          "propose",
+          "INNOVATION",
+          "positive",
+          0.8
+        ]
+      ],
+      "confidence_scores": [
+        0.5191097855567932,
+        0.0034876051358878613,
+        0.47740262746810913
+      ]
+    }
+  ],
+  "error_statistics": {
+    "confusion_pairs": {
+      "negative->neutral": 11,
+      "negative->positive": 8,
+      "positive->negative": 4,
+      "positive->neutral": 15,
+      "neutral->positive": 1
+    },
+    "quad_statistics": {
+      "avg_quads_per_sample": 1.8717948717948718,
+      "samples_without_quads": 0,
+      "category_distribution": {
+        "METHODOLOGY": 29,
+        "PERFORMANCE": 25,
+        "LIMITATION": 10,
+        "INNOVATION": 6,
+        "APPLICABILITY": 3
+      }
+    },
+    "high_confidence_errors": 6,
+    "error_types": {
+      "false_positive": 1,
+      "false_negative": 26,
+      "neutral_errors": 12
+    }
+  },
+  "model_performance": {
+    "classification_report": "              precision    recall  f1-score   support\n\n     neutral     0.9799    0.9992    0.9894      1266\n    positive     0.9622    0.9234    0.9424       248\n    negative     0.9640    0.8492    0.9030       126\n\n    accuracy                         0.9762      1640\n   macro avg     0.9687    0.9239    0.9449      1640\nweighted avg     0.9760    0.9762    0.9757      1640\n",
+    "total_samples": 1640,
+    "error_samples": 39,
+    "error_rate": 0.02378048780487805
+  },
+  "visualization_paths": {
+    "fused_embeddings": "output/dimension_reduction_fused_embeddings_tsne_20241124_214513.png",
+    "text_pooled": "output/dimension_reduction_text_pooled_outputs_tsne_20241124_214513.png",
+    "attention": [
+      {
+        "path": "output\\attention_visualization_20241124_214513_neutral_neutral.png",
+        "category": "correct",
+        "true_label": "neutral",
+        "predicted_label": "neutral",
+        "num_quads": 3
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_neutral_neutral.png",
+        "category": "correct",
+        "true_label": "neutral",
+        "predicted_label": "neutral",
+        "num_quads": 3
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_neutral_neutral.png",
+        "category": "correct",
+        "true_label": "neutral",
+        "predicted_label": "neutral",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_positive_positive.png",
+        "category": "correct",
+        "true_label": "positive",
+        "predicted_label": "positive",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_positive_positive.png",
+        "category": "correct",
+        "true_label": "positive",
+        "predicted_label": "positive",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_positive_positive.png",
+        "category": "correct",
+        "true_label": "positive",
+        "predicted_label": "positive",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_negative_negative.png",
+        "category": "correct",
+        "true_label": "negative",
+        "predicted_label": "negative",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_negative_negative.png",
+        "category": "correct",
+        "true_label": "negative",
+        "predicted_label": "negative",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_negative_negative.png",
+        "category": "correct",
+        "true_label": "negative",
+        "predicted_label": "negative",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_neutral_positive.png",
+        "category": "incorrect",
+        "true_label": "neutral",
+        "predicted_label": "positive",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_positive_neutral.png",
+        "category": "incorrect",
+        "true_label": "positive",
+        "predicted_label": "neutral",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_positive_negative.png",
+        "category": "incorrect",
+        "true_label": "positive",
+        "predicted_label": "negative",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_positive_neutral.png",
+        "category": "incorrect",
+        "true_label": "positive",
+        "predicted_label": "neutral",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_negative_positive.png",
+        "category": "incorrect",
+        "true_label": "negative",
+        "predicted_label": "positive",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_negative_positive.png",
+        "category": "incorrect",
+        "true_label": "negative",
+        "predicted_label": "positive",
+        "num_quads": 2
+      },
+      {
+        "path": "output\\attention_visualization_20241124_214513_negative_neutral.png",
+        "category": "incorrect",
+        "true_label": "negative",
+        "predicted_label": "neutral",
+        "num_quads": 2
+      }
+    ]
+  }
+}

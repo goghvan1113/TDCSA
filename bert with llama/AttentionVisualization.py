@@ -68,6 +68,7 @@ class AttentionVisualization(nn.Module):
 
         i = 0
         while i < len(tokens):
+            # 首先检查是否是特殊token
             if tokens[i] in [special_tokens['cls_display'], special_tokens['sep_display'], '[PAD]']:
                 merged_tokens.append(tokens[i])
                 merged_weights.append(attention_weights[:, i:i + 1])
@@ -75,17 +76,32 @@ class AttentionVisualization(nn.Module):
                 continue
 
             # 收集属于同一个词的所有子词
-            current_word = [tokens[i]]
-            current_indices = [i]
-            i += 1
-            while i < len(tokens):
-                if (self.model_type == 'bert' and tokens[i].startswith('##')) or \
-                        (self.model_type == 'roberta' and not tokens[i].startswith('Ġ')):
-                    current_word.append(tokens[i].replace('##', ''))
-                    current_indices.append(i)
-                    i += 1
-                else:
-                    break
+            current_word = []
+            current_indices = []
+
+            # 检查当前token是否是最后一个非特殊token
+            is_last_word = False
+            next_is_sep = (i + 1 < len(tokens) and tokens[i + 1] == special_tokens['sep_display'])
+
+            if next_is_sep:
+                is_last_word = True
+                current_word.append(tokens[i])
+                current_indices.append(i)
+                i += 1
+            else:
+                current_word = [tokens[i]]
+                current_indices = [i]
+                i += 1
+                while i < len(tokens):
+                    if tokens[i] in [special_tokens['cls_display'], special_tokens['sep_display'], '[PAD]']:
+                        break
+                    if (self.model_type == 'bert' and tokens[i].startswith('##')) or \
+                            (self.model_type == 'roberta' and not tokens[i].startswith('Ġ')):
+                        current_word.append(tokens[i].replace('##', ''))
+                        current_indices.append(i)
+                        i += 1
+                    else:
+                        break
 
             # 合并子词
             merged_token = ''.join(current_word)
@@ -199,61 +215,120 @@ class AttentionVisualization(nn.Module):
         return self_attn_output
 
     def visualize_attention_comparison(self):
+        """Create two-row comparison of attention heatmaps with shared x-axis and equal heights"""
         plt.style.use('default')
-        fig, axes = plt.subplots(2, 1, figsize=(20, 8))
-        plt.subplots_adjust(hspace=0.3)
 
-        # 获取注意力分数并归一化
+        # Create figure and GridSpec for precise control
+        fig = plt.figure(figsize=(16, 3))  # Reduced overall height
+        gs = plt.GridSpec(2, 1,
+                          height_ratios=[1, 1],  # Equal height ratios
+                          hspace=0.05,  # Minimal space between plots
+                          bottom=0.4)  # Increased bottom space for x-labels
+
+        # Create axes with shared x-axis
+        ax1 = fig.add_subplot(gs[0])
+        ax2 = fig.add_subplot(gs[1], sharex=ax1)
+
+        # Get attention scores
         bert_attention = self.attention_scores['bert_text'].mean(dim=1).squeeze(0)
         self_attention = self.attention_scores['self_attention'].squeeze(0)
 
-        # 归一化处理
+        # Normalize
         bert_attention = bert_attention / bert_attention.max()
         self_attention = self_attention / self_attention.max()
 
-        # 合并子词
+        # Merge subwords
         tokens = self.text_tokens[:bert_attention.shape[0]]
         merged_tokens, bert_merged_attention = self.merge_subwords(tokens, bert_attention)
         _, self_merged_attention = self.merge_subwords(tokens, self_attention)
 
-        # 创建热力图
-        self._create_single_row_heatmap(
-            axes[0],
-            bert_merged_attention.mean(dim=0),
-            merged_tokens,
-            "Text Encoder Attention\n(Before Aspect-Opinion Awareness)",
-            cmap='BuGn'  # 使用蓝绿配色
+        # Create top heatmap (baseline)
+        weights1 = bert_merged_attention.mean(dim=0).cpu().detach().numpy().reshape(1, -1)
+        sns.heatmap(
+            weights1,
+            ax=ax1,
+            cmap='BuGn',
+            cbar=False,
+            xticklabels=[],
+            yticklabels=['baseline'],
+            square=False
         )
 
-        self._create_single_row_heatmap(
-            axes[1],
-            self_merged_attention.mean(dim=0),
-            merged_tokens,
-            "Self Attention\n(After Aspect-Opinion Awareness)",
-            cmap='BuGn'  # 使用蓝绿配色
+        # Create bottom heatmap (this work)
+        weights2 = self_merged_attention.mean(dim=0).cpu().detach().numpy().reshape(1, -1)
+        sns.heatmap(
+            weights2,
+            ax=ax2,
+            cmap='BuGn',
+            cbar=False,
+            xticklabels=merged_tokens,
+            yticklabels=['this work'],
+            square=False
         )
 
-        plt.tight_layout()
+        # Set equal heights by adjusting the position and size of the axes
+        ax1_pos = ax1.get_position()
+        ax2_pos = ax2.get_position()
+        height = 0.15  # Define the desired height for both plots
+
+        # Adjust the height and position of both plots
+        ax1.set_position([ax1_pos.x0, ax1_pos.y0, ax1_pos.width, height])
+        ax2.set_position([ax2_pos.x0, ax2_pos.y0, ax2_pos.width, height])
+
+        # Remove spines and titles
+        for ax in [ax1, ax2]:
+            ax.set_xlabel('')
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+            ax.set_title('')
+            ax.tick_params(axis='both', which='both', length=0)
+
+        # Style y-axis labels
+        plt.setp([ax1.get_yticklabels(), ax2.get_yticklabels()],
+                 rotation=0,
+                 fontsize=12,
+                 fontweight='bold')
+
+        # Style x-axis labels (only on bottom plot)
+        plt.setp(ax2.get_xticklabels(),
+                 rotation=45,
+                 ha='right',
+                 fontsize=12,
+                 fontweight='bold')
+
+        # Ensure x-axis labels are hidden for top plot
+        ax1.xaxis.set_visible(False)
+
         return fig
 
-    def _create_single_row_heatmap(self, ax, attention_weights, tokens, title, cmap='BuGn'):
+    def _create_single_row_heatmap(self, ax, attention_weights, tokens, title, cmap='BuGn', show_xlabel=True):
+        """Create heatmap for single row of attention scores"""
         weights = attention_weights.cpu().detach().numpy()
         weights = weights.reshape(1, -1)
 
+        # Create heatmap
         sns.heatmap(
             weights,
             ax=ax,
             cmap=cmap,
             cbar=False,
-            cbar_kws={'label': 'Attention Weight'},
-            xticklabels=tokens,
+            xticklabels=tokens if show_xlabel else [],
             yticklabels=['Attention'],
             square=False
         )
 
-        ax.set_title(title, pad=20, fontsize=12)
-        plt.setp(ax.get_xticklabels(), rotation=45, ha='right', fontsize=10)
-        plt.setp(ax.get_yticklabels(), rotation=0, fontsize=10)
+        # Style settings
+        ax.set_title(title, pad=20, fontsize=14, fontweight='bold')
+        if show_xlabel:
+            plt.setp(ax.get_xticklabels(),
+                     rotation=45,
+                     ha='right',
+                     fontsize=12,
+                     fontweight='bold')
+        plt.setp(ax.get_yticklabels(),
+                 rotation=0,
+                 fontsize=12,
+                 fontweight='bold')
 
 
 def visualize_model_attention(model, tokenizer, text, quad_text, category_ids=None):
