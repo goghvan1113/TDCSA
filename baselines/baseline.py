@@ -27,6 +27,9 @@ class CitationDataset(Dataset):
         self.vocab = vocab
         self.tokenizer = tokenizer
         self.max_length = max_length
+        # 确保vocab中有<unk>和<pad>标记
+        assert '<unk>' in self.vocab, "Vocabulary must contain <unk> token"
+        assert '<pad>' in self.vocab, "Vocabulary must contain <pad> token"
 
     def __len__(self):
         return len(self.texts)
@@ -38,8 +41,8 @@ class CitationDataset(Dataset):
         # Tokenize text
         tokens = self.tokenizer(text.lower())
 
-        # Convert tokens to indices
-        indices = [self.vocab[token] for token in tokens]
+        # 安全地转换tokens到indices，处理未知词
+        indices = [self.vocab.get(token, self.vocab['<unk>']) for token in tokens]
 
         # Pad or truncate to max_length
         if len(indices) < self.max_length:
@@ -51,7 +54,6 @@ class CitationDataset(Dataset):
             'indices': torch.tensor(indices, dtype=torch.long),
             'label': torch.tensor(label, dtype=torch.long)
         }
-
 
 def prepare_data(pos_neg_file: str, neutral_file: str) -> Tuple[List[str], List[int]]:
     """Load and prepare data from JSON files
@@ -97,22 +99,28 @@ def prepare_data_and_vocab(pos_neg_file: str, neutral_file: str, min_freq: int =
     texts = []
     labels = []
 
-    # Load positive/negative samples
-    with open(pos_neg_file, 'r', encoding='utf-8') as f:
-        pos_neg_data = json.load(f)
+    # # Load positive/negative samples
+    # with open(pos_neg_file, 'r', encoding='utf-8') as f:
+    #     pos_neg_data = json.load(f)
+    #
+    # for item in pos_neg_data:
+    #     if item['overall_sentiment'] in ['positive', 'negative']:
+    #         texts.append(item['text'])
+    #         labels.append(1 if item['overall_sentiment'] == 'positive' else 2)
+    #
+    # # Load neutral samples
+    # with open(neutral_file, 'r', encoding='utf-8') as f:
+    #     neutral_data = json.load(f)
+    #
+    # for item in neutral_data:
+    #     texts.append(item['text'])
+    #     labels.append(0)  # neutral label
 
-    for item in pos_neg_data:
-        if item['overall_sentiment'] in ['positive', 'negative']:
-            texts.append(item['text'])
-            labels.append(1 if item['overall_sentiment'] == 'positive' else 2)
-
-    # Load neutral samples
-    with open(neutral_file, 'r', encoding='utf-8') as f:
-        neutral_data = json.load(f)
-
-    for item in neutral_data:
-        texts.append(item['text'])
-        labels.append(0)  # neutral label
+    df = pd.read_csv(f'../data/citation_sentiment_corpus.csv')
+    label_map = {'o': 0, 'p': 1, 'n': 2}
+    df['Sentiment'] = df['Sentiment'].map(label_map)
+    texts = df['Citation_Text'].tolist()
+    labels = df['Sentiment'].tolist()
 
     # Initialize tokenizer
     tokenizer = get_tokenizer('basic_english')
@@ -302,86 +310,6 @@ class BiLSTMAttention(nn.Module):
         outputs, _ = self.lstm(embedded)
         attention_out = self.attention_net(outputs)
         return self.fc(self.dropout(attention_out))
-
-class CitationDataset(Dataset):
-    def __init__(self, texts: List[str], labels: List[int], vocab, tokenizer, max_length: int = 512):
-        self.texts = texts
-        self.labels = labels
-        self.vocab = vocab
-        self.tokenizer = tokenizer
-        self.max_length = max_length
-
-    def __len__(self):
-        return len(self.texts)
-
-    def __getitem__(self, idx):
-        text = str(self.texts[idx])
-        label = self.labels[idx]
-
-        # Tokenize text
-        tokens = self.tokenizer(text.lower())
-
-        # Convert tokens to indices
-        indices = [self.vocab[token] for token in tokens]
-
-        # Pad or truncate to max_length
-        if len(indices) < self.max_length:
-            indices.extend([self.vocab['<pad>']] * (self.max_length - len(indices)))
-        else:
-            indices = indices[:self.max_length]
-
-        return {
-            'indices': torch.tensor(indices, dtype=torch.long),
-            'label': torch.tensor(label, dtype=torch.long)
-        }
-
-def prepare_data_and_vocab(pos_neg_file: str, neutral_file: str):
-    """Load data and prepare vocabulary using torchtext"""
-    # Load data
-    texts = []
-    labels = []
-
-    # Load positive/negative samples
-    with open(pos_neg_file, 'r', encoding='utf-8') as f:
-        pos_neg_data = json.load(f)
-
-    for item in pos_neg_data:
-        if item['overall_sentiment'] in ['positive', 'negative']:
-            texts.append(item['text'])
-            labels.append(1 if item['overall_sentiment'] == 'positive' else 2)
-
-    # Load neutral samples
-    with open(neutral_file, 'r', encoding='utf-8') as f:
-        neutral_data = json.load(f)
-
-    for item in neutral_data:
-        texts.append(item['text'])
-        labels.append(0)  # neutral label
-
-    # Initialize tokenizer
-    tokenizer = get_tokenizer('basic_english')
-
-    # Load GloVe embeddings
-    glove = GloVe(name='6B', dim=300)
-
-    # Create vocabulary from GloVe
-    vocab = glove.stoi.copy()  # Create a copy to avoid modifying original
-    # Add special tokens
-    special_tokens = ['<pad>', '<unk>']
-    for token in special_tokens:
-        if token not in vocab:
-            vocab[token] = len(vocab)
-
-    # Create embedding matrix
-    embedding_matrix = torch.zeros(len(vocab), 300)
-    for word, idx in vocab.items():
-        if word in glove.stoi:
-            embedding_matrix[idx] = glove.vectors[glove.stoi[word]]
-        else:
-            embedding_matrix[idx] = torch.randn(300) * 0.1
-
-    return texts, labels, vocab, tokenizer, embedding_matrix
-
 
 # 3. 新的BERT+BiLSTM+Attention模型(替换原有的BERT模型)
 class BertBiLSTMAttention(nn.Module):
@@ -582,9 +510,9 @@ def main():
                         default='bert-base-uncased')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--max_length', type=int, default=512)
-    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--learning_rate', type=float, default=2e-5)
+    parser.add_argument('--learning_rate', type=float, default=2e-4)
     parser.add_argument('--hidden_dim', type=int, default=256)
     parser.add_argument('--n_layers', type=int, default=2)
     parser.add_argument('--dropout', type=float, default=0.3)
@@ -693,7 +621,7 @@ def main():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     plot_path = os.path.join(args.output_dir,
                              f'{args.model_type}_metrics_{timestamp}.png')
-    tracker.plot_metrics(save_path=plot_path)
+    tracker.plot_metrics()
 
     # Evaluate on test set
     print("\nEvaluating on test set...")
@@ -706,10 +634,10 @@ def main():
         'args': vars(args)
     }
 
-    results_path = os.path.join(args.output_dir,
-                                f'{args.model_type}_results_{timestamp}.json')
-    with open(results_path, 'w') as f:
-        json.dump(results, f, indent=4)
+    # results_path = os.path.join(args.output_dir,
+    #                             f'{args.model_type}_results_{timestamp}.json')
+    # with open(results_path, 'w') as f:
+    #     json.dump(results, f, indent=4)
 
     print("\nTest Set Results:")
     print(f"Loss: {test_metrics['loss']:.4f}")
@@ -717,7 +645,7 @@ def main():
     print(f"F1 Macro: {test_metrics['f1_macro']:.4f}")
     print("\nClassification Report:")
     print(test_metrics['classification_report'])
-    print(f"\nResults saved to: {results_path}")
+
 
 
 if __name__ == "__main__":

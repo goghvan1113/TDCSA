@@ -157,10 +157,12 @@ class QuadAspectEnhancedBertModel(PreTrainedModel):
             nn.Dropout(config.hidden_dropout_prob)
         )
         # 融合层
+        from ablation_study import (AdditiveAttentionFusion, BilinearFusion,
+                                    HierarchicalFusion, CrossModalFusion, ResidualFusion)
         self.fusion = NonLinearFusion(hidden_size, config.hidden_dropout_prob)
 
         # 分类器
-        self.classifier = nn.Linear(hidden_size * 3, config.num_labels)
+        self.classifier = nn.Linear(hidden_size*3, config.num_labels)
         # 情感检测器
         self.sentiment_detector = nn.Linear(hidden_size, 2)
 
@@ -365,26 +367,18 @@ class QuadAspectDataProcessor:
         return '', 0
 
     def _process_random_mask_quad(self, feature: Dict) -> Tuple[str, int]:
-        """使用随机掩码处理四元组"""
-        num_neutral_tags = random.randint(1, 2)
-        num_words = random.randint(2, 5)
-
-        # 随机选择一个类别
+        """使用随机掩码或中性词替换aspect和opinion"""
+        # 获取类别
         category = random.choice(list(self.category2id.keys()))
-        # 获取该类别的随机词
-        neutral_tags = [self.mask_token] * num_neutral_tags
-        random_words = random.sample(self.noise_tokens, num_words)
-
-        # 组合并打乱词序
-        combined_list = neutral_tags + random_words
-        random.shuffle(combined_list)
-
-        # 确保长度合适
-        if len(combined_list) < 5:
-            combined_list += [self.mask_token] * (5 - len(combined_list))
-
-        quad_text = " ".join(combined_list[:5])
-        return quad_text, self.category2id[category]
+        # 随机选择[MASK]或中性词作为aspect和opinion
+        aspect_choices = [self.mask_token] + self.noise_tokens
+        opinion_choices = [self.mask_token] + self.noise_tokens
+        aspect = random.choice(aspect_choices)
+        opinion = random.choice(opinion_choices)
+        # 创建四元组文本
+        quad_text = f"This citation expresses {self.mask_token} sentiment towards {aspect} through {opinion} which belongs to {category} category"
+        category_id = self.category2id.get(category, 0)
+        return quad_text, category_id
 
     def _process_random_polar_quad(self, feature: Dict, pos_neg_quads: List) -> Tuple[str, int]:
         """使用随机极性处理四元组"""
@@ -430,7 +424,7 @@ class QuadAspectDataProcessor:
     def process_features(self, features: List[Dict], method: str = 'original',
                          original_prob: float = 0) -> Dict[str, torch.Tensor]:
         """
-        处理四元组特征
+        处理四元组��征
 
         Args:
             features: 特征列表
@@ -463,13 +457,14 @@ class QuadAspectDataProcessor:
         # 处理四元组
         quad_texts = []
         category_ids = []
-        processor = self._get_processor_method(method, original_prob)
 
         for feature in features:
             if feature.get('label', 0) == 0:  # 中性样本
+                processor = self._get_processor_method(method, original_prob) # 这个方法要放到遍历里面
                 quad_text, category_id = (processor(feature, pos_neg_quads)
                                           if processor.__name__ == '_process_random_polar_quad'
                                           else processor(feature))
+
             else:  # 非中性样本使用原始处理方法
                 quad_text, category_id = self._process_original_quad(feature)
 
@@ -494,6 +489,139 @@ class QuadAspectDataProcessor:
             "labels": torch.tensor(labels),
             "sentiment_labels": torch.tensor(sentiment_labels)
         }
+
+        # texts = [f.get('text', '') for f in features]
+        # labels = [f.get('label', 0) for f in features]  # 使用get方法安全获取标签
+        # sentiment_labels = [1 if label > 0 else 0 for label in labels]
+        #
+        # text_encoding = self.tokenizer(
+        #     texts,
+        #     padding=True,
+        #     truncation=True,
+        #     max_length=self.max_length,
+        #     return_tensors='pt'
+        # )
+        #
+        # # Collect all positive and negative quadruples
+        # pos_neg_quads = []
+        # for feature in features:
+        #     if feature.get('label', 0) != 0:  # Positive or Negative samples
+        #         quads = feature.get('quads', [])
+        #         pos_neg_quads.extend(quads)
+        #
+        # # 处理四元组
+        # quad_texts = []
+        # category_ids = []
+        # for feature in features:
+        #     if feature.get('label', 0) == 0:  # Neutral sample
+        #         # method = random.choice(['random_mask', 'random_polar', 'random_words'])
+        #         if method == 'empty':
+        #             quad_text = ''
+        #             category_id = 0
+        #         elif method == 'random_mask':
+        #             # 使用[MASK]符号和随机噪声填充中性样本的三元组
+        #             noise_tokens = [
+        #                 "neutral", "sample", "info", "example", "text", "generic", "data", "reference", "analysis",
+        #                 "method", "approach", "context", "details", "review", "background", "overview", "basis",
+        #                 "supporting", "summary", "aspect", "topic", "result", "content", "framework", "definition",
+        #                 "perspective", "framework", "parameter", "hypothesis", "purpose", "context", "concept",
+        #                 "finding", "discussion", "focus", "case", "observation", "outline", "description",
+        #                 "literature", "citation", "source", "statement", "concept", "objective", "insight",
+        #                 "overview", "scope", "narrative", "data", "sampling", "parameters", "model", "application",
+        #                 "approach", "contribution", "aspect", "point", "highlight", "field", "angle", "review",
+        #                 "data", "collection", "survey", "discussion", "observation", "analysis", "phenomenon",
+        #                 "evidence", "evaluation", "factor", "basis", "insight", "record", "statistical", "note",
+        #                 "term", "application", "practice", "theme", "range", "pattern", "structure", "strategy",
+        #                 "background", "core", "survey", "source", "option", "component", "variable", "output",
+        #                 "input", "equation", "notation", "framework", "methodology", "reference", "technique",
+        #                 "context", "standard", "goal", "element", "operation", "material", "topic", "theory",
+        #                 "format", "hypothesis", "data", "overview", "section", "outline", "support", "summary",
+        #                 "literature", "definition", "metric", "aspect", "version", "pathway", "background",
+        #                 "factor", "function", "assessment", "process", "insight", "highlight", "trend",
+        #                 "hypothesis", "design", "view", "procedure", "summary", "representation", "property",
+        #                 "construct", "aspect", "formula", "description", "subsection", "principle", "element",
+        #                 "protocol", "phase", "inference", "statement", "illustration", "application", "framework",
+        #                 "notation", "dataset", "theory", "phenomenon", "measure", "instance", "idea",
+        #                 "proposition", "foundation", "structure", "analysis", "foundation", "term", "description",
+        #                 "idea", "conception", "feature", "element", "hypothesis", "evaluation", "syntax",
+        #                 "concept", "notion", "comparison", "scheme", "basis", "modeling", "pattern", "aspect",
+        #                 "object", "theory", "property", "domain", "notation", "factor", "rationale", "viewpoint"
+        #             ]
+        #             num_neutral_tags = random.randint(1, 2)  # 随机选择1到2个中性标记
+        #             num_words = random.randint(2, 5)  # 随机选择2到5个中性词
+        #
+        #             neutral_tags = ["[MASK]"] * num_neutral_tags
+        #             random_words = random.sample(noise_tokens, num_words)
+        #
+        #             combined_list = neutral_tags + random_words
+        #             random.shuffle(combined_list)
+        #             if len(combined_list) < 5:  # 截取或者填充
+        #                 combined_list += ["[MASK]"] * (5 - len(combined_list))
+        #             quad_text = " ".join(combined_list[:5])
+        #             category_id = 0
+        #         elif method == 'random_polar':
+        #             # Randomly select a quadruple from positive and negative samples
+        #             if pos_neg_quads:
+        #                 aspect, opinion, category, polarity, confidence = random.choice(pos_neg_quads)
+        #                 quad_text = f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category"
+        #                 # quad_text = f"This citation expresses [MASK] sentiment towards [ASPECT] through [OPINION] which belongs to [CATEGORY] category"
+        #                 # quad_text = f"{aspect} is {opinion} in [[MASK]] {category}"
+        #                 category_id = self.category2id.get(category, 0)
+        #             else:
+        #                 quad_text = ""
+        #                 category_id = 0
+        #         elif method == 'random_words':
+        #             # 下面代码是随机在中性文本中选择四元组
+        #             text_tokens = feature.get('text', '').split()
+        #             if len(text_tokens) >= 2:
+        #                 aspect = random.choice(text_tokens)
+        #                 opinion = random.choice(text_tokens)
+        #             else:
+        #                 aspect = 'aspect'
+        #                 opinion = 'opinion'
+        #             category = random.choice(list(self.category2id.keys()))
+        #             quad_text = f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category"
+        #             category_id = self.category2id.get(category, 0)
+        #     else:
+        #         quads = feature.get('quads', [])
+        #         quad_parts = []
+        #         feature_categories = []
+        #         for aspect, opinion, category, polarity, confidence in quads:
+        #             quad_parts.append(
+        #                 f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category")
+        #             # quad_parts.append("This citation expresses [MASK] sentiment towards [ASPECT] through [OPINION] which belongs to [CATEGORY] category")
+        #             # quad_parts.append(f"{aspect} is {opinion} in [[MASK]] {category}")
+        #             quad_parts.append(" [SEP] ")
+        #             feature_categories.append(category)
+        #         quad_text = " ; ".join(quad_parts)
+        #         # 使用最常见的类别作为该样本的主类别
+        #         if feature_categories:
+        #             most_common_category = max(set(feature_categories),
+        #                                        key=feature_categories.count)
+        #             category_id = self.category2id.get(most_common_category, 0)
+        #         else:
+        #             category_id = 0
+        #
+        #     quad_texts.append(quad_text)
+        #     category_ids.append(category_id)
+        #
+        # quad_encoding = self.tokenizer(
+        #     quad_texts,
+        #     padding=True,
+        #     truncation=True,
+        #     max_length=self.max_length,
+        #     return_tensors="pt"
+        # )
+        #
+        # return {
+        #     "input_ids": text_encoding["input_ids"],
+        #     "attention_mask": text_encoding["attention_mask"],
+        #     "quad_input_ids": quad_encoding["input_ids"],
+        #     "quad_attention_mask": quad_encoding["attention_mask"],
+        #     "category_ids": torch.tensor(category_ids),
+        #     "labels": torch.tensor(labels),
+        #     "sentiment_labels": torch.tensor(sentiment_labels)
+        # }
 
 
 class AspectAwareDataset(torch.utils.data.Dataset):
@@ -538,7 +666,7 @@ class AspectAwareDataset(torch.utils.data.Dataset):
             })
         # Shuffle the samples
         random.shuffle(self.samples)
-        processed_features = self.processor.process_features(self.samples, method=method)
+        processed_features = self.processor.process_features(self.samples, method=method, original_prob=0.0)
 
         # Convert tensor data to dictionary with indices
         for key in processed_features:
@@ -592,7 +720,7 @@ class DatasetSplitter:
         划分数据集，返回训练集、验证集和测试集
 
         Returns:
-            训练集、验证集和测试集的字典，每个字典包含pos_neg_samples和neutral_samples
+            训练集、验证集和测试集的字典，每个字典���含pos_neg_samples和neutral_samples
         """
         # 首先划分带ASTE标注的样本
         pos_neg_labels = [s['overall_sentiment'] for s in self.pos_neg_samples]
@@ -1222,7 +1350,7 @@ def train_asqp_model(args, train_data, eval_data):
     # 定义模型保存路径
     model_save_path = f'./finetuned_models/{args.model_name}/best_model'
 
-    model = QuadAspectEnhancedBertModel(config).to(device)
+    model = AttentionVariant(config).to(device)
     tokenizer = AutoTokenizer.from_pretrained(f"../pretrain_models/{args.model_name}")
     # print(model)
 
@@ -1297,12 +1425,12 @@ def main(args):
 
     split_data = splitter.split_data(stratify_by_sentiment=True)
     # 打印数据集统计信息
-    for split_name, split in split_data.items():
-        pos_neg_dist = Counter(s['overall_sentiment'] for s in split['pos_neg_samples'])
-        print(f"\n{split_name} set distribution:")
-        print(f"Positive: {pos_neg_dist['positive']}")
-        print(f"Negative: {pos_neg_dist['negative']}")
-        print(f"Neutral: {len(split['neutral_samples'])}")
+    # for split_name, split in split_data.items():
+    #     pos_neg_dist = Counter(s['overall_sentiment'] for s in split['pos_neg_samples'])
+    #     print(f"\n{split_name} set distribution:")
+    #     print(f"Positive: {pos_neg_dist['positive']}")
+    #     print(f"Negative: {pos_neg_dist['negative']}")
+    #     print(f"Neutral: {len(split['neutral_samples'])}")
 
     # 初始化处理器和分词器
     tokenizer = AutoTokenizer.from_pretrained(f"../pretrain_models/{args.model_name}")
@@ -1310,14 +1438,13 @@ def main(args):
         split_data,
         tokenizer,
         with_asqp=True,  # 在这进行tokenize
-        method='original' # ['random_mask', 'random_words', 'random_polar', 'empty', 'original', 'random_multi']
+        method='random_multi' # ['random_mask', 'random_words', 'random_polar', 'empty', 'original', 'random_multi']
     )
-    # mask 0.9385 0.9718 words 0.9507  0.97 polar 0.9524
 
     # 训练模型并获取最佳模型路径
     best_model_path = train_asqp_model(args, train_dataset, val_dataset)
 
-    # best_model_path = f'./finetuned_models/{args.model_name}/best_model'
+    best_model_path = f'./finetuned_models/{args.model_name}/best_model'
     config = QuadAspectEnhancedBertConfig.from_pretrained(best_model_path)
     best_model = QuadAspectEnhancedBertModel.from_pretrained(best_model_path, config=config)
     evaluator = ModelEvaluator(best_model, tokenizer)

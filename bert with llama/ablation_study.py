@@ -1,10 +1,162 @@
 from typing import Optional
-
+import torch.nn.functional as F
 import torch
 import torch.nn as nn
 from modelscope import AutoConfig
 from transformers import PreTrainedModel, AutoModel, PretrainedConfig
 
+
+class AdditiveAttentionFusion(nn.Module):
+    """加性注意力融合
+    使用加性注意力机制来动态融合不同特征
+    """
+
+    def __init__(self, hidden_size, dropout_prob):
+        super().__init__()
+        self.attention = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.Tanh(),
+            nn.Linear(hidden_size, 1)
+        )
+        self.output_layer = nn.Sequential(
+            nn.Linear(hidden_size * 3, hidden_size * 3),
+            nn.LayerNorm(hidden_size * 3),
+            nn.Dropout(dropout_prob)
+        )
+
+    def forward(self, text_features, quad_features, attn_features):
+        # 堆叠特征
+        features = torch.stack([text_features, quad_features, attn_features], dim=1)
+        # 计算注意力权重
+        weights = self.attention(features)
+        weights = F.softmax(weights, dim=1)
+        # 加权融合
+        weighted_sum = torch.sum(weights * features, dim=1)
+        return self.output_layer(weighted_sum)
+
+
+class BilinearFusion(nn.Module):
+    """双线性特征融合
+    使用双线性变换来建模特征间的高阶交互
+    """
+
+    def __init__(self, hidden_size, dropout_prob):
+        super().__init__()
+        self.bilinear1 = nn.Bilinear(hidden_size, hidden_size, hidden_size)
+        self.bilinear2 = nn.Bilinear(hidden_size, hidden_size, hidden_size)
+
+        self.fusion_layer = nn.Sequential(
+            nn.Linear(hidden_size * 3, hidden_size * 3),
+            nn.LayerNorm(hidden_size * 3),
+            nn.ReLU(),
+            nn.Dropout(dropout_prob)
+        )
+
+    def forward(self, text_features, quad_features, attn_features):
+        # 双线性交互
+        interaction1 = self.bilinear1(text_features, quad_features)
+        interaction2 = self.bilinear2(interaction1, attn_features)
+        # 连接所有特征
+        fused = torch.cat([interaction2, text_features, quad_features], dim=-1)
+        return self.fusion_layer(fused)
+
+
+class HierarchicalFusion(nn.Module):
+    """层次化特征融合
+    通过多层次的方式逐步融合不同特征
+    """
+
+    def __init__(self, hidden_size, dropout_prob):
+        super().__init__()
+        self.level1_fusion = nn.Sequential(
+            nn.Linear(hidden_size * 2, hidden_size),
+            nn.LayerNorm(hidden_size),
+            nn.ReLU(),
+            nn.Dropout(dropout_prob)
+        )
+
+        self.level2_fusion = nn.Sequential(
+            nn.Linear(hidden_size * 2, hidden_size * 3),
+            nn.LayerNorm(hidden_size * 3),
+            nn.ReLU(),
+            nn.Dropout(dropout_prob)
+        )
+
+    def forward(self, text_features, quad_features, attn_features):
+        # 第一层融合
+        level1 = self.level1_fusion(torch.cat([text_features, quad_features], dim=-1))
+        # 第二层融合
+        level2 = self.level2_fusion(torch.cat([level1, attn_features], dim=-1))
+        return level2
+
+
+class CrossModalFusion(nn.Module):
+    """跨模态特征融合
+    使用交叉注意力和门控机制进行特征融合
+    """
+
+    def __init__(self, hidden_size, dropout_prob):
+        super().__init__()
+        self.cross_attention = nn.MultiheadAttention(
+            embed_dim=hidden_size,
+            num_heads=8,
+            dropout=dropout_prob,
+            batch_first=True
+        )
+
+        self.gate = nn.Sequential(
+            nn.Linear(hidden_size * 3, hidden_size * 3),
+            nn.Sigmoid()
+        )
+
+        self.output_layer = nn.Sequential(
+            nn.Linear(hidden_size * 3, hidden_size * 3),
+            nn.LayerNorm(hidden_size * 3),
+            nn.ReLU(),
+            nn.Dropout(dropout_prob)
+        )
+
+    def forward(self, text_features, quad_features, attn_features):
+        # 准备查询、键和值
+        features = torch.stack([text_features, quad_features, attn_features], dim=1)
+        # 交叉注意力
+        attended_features, _ = self.cross_attention(features, features, features)
+        # 计算门控权重
+        gates = self.gate(attended_features.reshape(attended_features.size(0), -1))
+        # 应用门控并输出
+        gated_features = gates * attended_features.reshape(attended_features.size(0), -1)
+        return self.output_layer(gated_features)
+
+
+class ResidualFusion(nn.Module):
+    """残差特征融合
+    使用残差连接来保持原始特征信息
+    """
+
+    def __init__(self, hidden_size, dropout_prob):
+        super().__init__()
+        self.transform = nn.Sequential(
+            nn.Linear(hidden_size * 3, hidden_size * 3),
+            nn.LayerNorm(hidden_size * 3),
+            nn.ReLU(),
+            nn.Dropout(dropout_prob),
+            nn.Linear(hidden_size * 3, hidden_size * 3)
+        )
+
+        self.fusion_gate = nn.Sequential(
+            nn.Linear(hidden_size * 6, hidden_size * 3),
+            nn.Sigmoid()
+        )
+
+    def forward(self, text_features, quad_features, attn_features):
+        # 连接原始特征
+        original = torch.cat([text_features, quad_features, attn_features], dim=-1)
+        # 特征变换
+        transformed = self.transform(original)
+        # 计算融合门控
+        gate = self.fusion_gate(torch.cat([original, transformed], dim=-1))
+        # 残差连接
+        return gate * transformed + (1 - gate) * original
 
 class QuadAspectEnhancedBertConfig(PretrainedConfig):
     """配置类 - 增加四元组相关配置"""
@@ -1158,25 +1310,6 @@ class AttentionVariant(PreTrainedModel):
             attn_pooled = torch.mean(self_attn_output, dim=1)  # [batch_size, hidden_size]
             return attn_pooled
 
-        # 变体2：text作为key，quad作为value
-        def variant2_attention(self):
-            cross_attn_output, _ = self.cross_attention(
-                query=text_transformed,  # [batch_size, text_len, hidden_size]
-                key=text_transformed,  # [batch_size, text_len, hidden_size]
-                value=quad_transformed,  # [batch_size, quad_len, hidden_size]
-                key_padding_mask=~attention_mask.bool()
-            )  # 输出: [batch_size, text_len, hidden_size]
-
-            self_attn_output, _ = self.self_attention(
-                query=cross_attn_output,
-                key=cross_attn_output,
-                value=cross_attn_output,
-                key_padding_mask=~attention_mask.bool()
-            )  # 输出: [batch_size, text_len, hidden_size]
-
-            attn_pooled = torch.mean(self_attn_output, dim=1)  # [batch_size, hidden_size]
-            return attn_pooled
-
         # 变体3：双向注意力
         def variant3_attention(self):
             # Text to Quad attention
@@ -1203,6 +1336,97 @@ class AttentionVariant(PreTrainedModel):
             attn_pooled = (text2quad_pooled + quad2text_pooled) / 2  # [batch_size, hidden_size]
             return attn_pooled
 
+        # 变体5：双向注意力 + 自注意力
+        def variant5_bidirectional_self_attention(self):
+            """双向注意力后接自注意力机制
+            1. 先计算双向的交叉注意力
+            2. 融合双向注意力的结果
+            3. 对融合后的特征进行自注意力处理
+            """
+            # Text to Quad attention
+            text2quad_output, _ = self.cross_attention(
+                query=text_transformed,
+                key=quad_transformed,
+                value=quad_transformed,
+                key_padding_mask=~quad_attention_mask.bool()
+            )  # [batch_size, text_len, hidden_size]
+
+            # Quad to Text attention
+            quad2text_output, _ = self.cross_attention(
+                query=quad_transformed,
+                key=text_transformed,
+                value=text_transformed,
+                key_padding_mask=~attention_mask.bool()
+            )  # [batch_size, quad_len, hidden_size]
+
+            # 融合双向注意力的结果
+            # 将两个序列长度对齐（通过平均池化）
+            text2quad_avg = torch.mean(text2quad_output, dim=1, keepdim=True)  # [batch_size, 1, hidden_size]
+            quad2text_avg = torch.mean(quad2text_output, dim=1, keepdim=True)  # [batch_size, 1, hidden_size]
+
+            # 拼接双向注意力的结果
+            combined_features = torch.cat([text2quad_avg, quad2text_avg], dim=1)  # [batch_size, 2, hidden_size]
+
+            # 应用自注意力机制
+            self_attn_output, _ = self.self_attention(
+                query=combined_features,
+                key=combined_features,
+                value=combined_features
+            )  # [batch_size, 2, hidden_size]
+
+            # 最终池化
+            attn_pooled = torch.mean(self_attn_output, dim=1)  # [batch_size, hidden_size]
+
+            return attn_pooled
+
+        # 变体6：级联注意力 + 自注意力
+        def variant6_cascaded_self_attention(self):
+            """级联注意力后接自注意力机制
+            1. 先进行两阶段的级联注意力
+            2. 保留中间状态和最终状态
+            3. 对所有状态进行自注意力处理
+            """
+            # First cross-attention
+            text2quad_output, _ = self.cross_attention(
+                query=text_transformed,
+                key=quad_transformed,
+                value=quad_transformed,
+                key_padding_mask=~quad_attention_mask.bool()
+            )  # [batch_size, text_len, hidden_size]
+
+            # Second cross-attention
+            cascaded_output, _ = self.cross_attention(
+                query=quad_transformed,
+                key=text2quad_output,
+                value=text2quad_output,
+                key_padding_mask=~attention_mask.bool()
+            )  # [batch_size, quad_len, hidden_size]
+
+            # 收集所有中间状态
+            # 将所有序列长度统一（通过平均池化）
+            text2quad_avg = torch.mean(text2quad_output, dim=1, keepdim=True)  # [batch_size, 1, hidden_size]
+            cascaded_avg = torch.mean(cascaded_output, dim=1, keepdim=True)  # [batch_size, 1, hidden_size]
+            original_avg = torch.mean(text_transformed, dim=1, keepdim=True)  # [batch_size, 1, hidden_size]
+
+            # 拼接所有状态
+            all_states = torch.cat([
+                original_avg,  # 原始特征
+                text2quad_avg,  # 第一阶段注意力
+                cascaded_avg  # 第二阶段注意力
+            ], dim=1)  # [batch_size, 3, hidden_size]
+
+            # 应用自注意力机制整合所有状态
+            self_attn_output, _ = self.self_attention(
+                query=all_states,
+                key=all_states,
+                value=all_states
+            )  # [batch_size, 3, hidden_size]
+
+            # 最终池化
+            attn_pooled = torch.mean(self_attn_output, dim=1)  # [batch_size, hidden_size]
+
+            return attn_pooled
+
         # 变体4：级联注意力
         def variant4_attention(self):
             # First cross-attention
@@ -1225,7 +1449,7 @@ class AttentionVariant(PreTrainedModel):
             return attn_pooled
 
         # 选择使用哪个变体（
-        attn_pooled = variant4_attention(self)  # [batch_size, hidden_size]
+        attn_pooled = variant3_attention(self)  # [batch_size, hidden_size]
 
         # 特征融合
         fused = self.fusion(text_pooled, quad_pooled, attn_pooled)

@@ -606,13 +606,13 @@ def main():
     seed_everything(seed)
 
     file_path = '../data/citation_sentiment_corpus_expand.csv'
-    initial_output_dir = '../output/sentiment_asqp_results_corpus_expand_llama70b.json'
+    initial_output_dir = '../output/sentiment_asqp_results_corpus_expand_llama405b.json'
     final_output_dir = '../output/sentiment_asqp_results_corpus_expand_verified_deepseek.json'
     extractor_model_name = 'Meta-Llama-3-8B-Instruct'
     verifier_model_name = 'Meta-Llama-3.1-8B-Instruct'
     device = 'cuda:0'
 
-    tokenizer = AutoTokenizer.from_pretrained(f'../pretrain_models/{extractor_model_name}')
+    tokenizer = AutoTokenizer.from_pretrained(f'D:/llm/{extractor_model_name}')
     # extractor_model = AutoModelForCausalLM.from_pretrained(
     #     f'../pretrain_models/{extractor_model_name}',
     #     torch_dtype=torch.bfloat16,
@@ -621,34 +621,27 @@ def main():
     # )
     extractor_model = None #不加载到显存里面
     # verifier_model = AutoModelForCausalLM.from_pretrained(
-    #     f'../pretrain_models/{verifier_model_name}',
+    #     f'D:/llm/{verifier_model_name}',
     #     torch_dtype=torch.bfloat16,
     #     attn_implementation='flash_attention_2',
     #     device_map=device
     # )
     verifier_model = None
 
-    initial_results = process_dataset(file_path, tokenizer, extractor_model, device, with_api=True)
-    save_results(initial_results, initial_output_dir)
+    # initial_results = process_dataset(file_path, tokenizer, extractor_model, device, with_api=True)
+    # save_results(initial_results, initial_output_dir)
 
-    # results, quality_metrics = process_dataset_with_verification(
-    #     file_path,
-    #     extractor_model,
-    #     verifier_model,
-    #     tokenizer,
-    #     device,
-    #     initial_output_dir,
-    #     final_output_dir,
-    #     with_api=True
-    # )
-    # print("Quality metrics:", quality_metrics)
-
-    # 'average_confidence': 0.8289524599226354,
-    # 'total_original_quadruples': 3618,
-    # 'total_valid_quadruples': 2032,
-    # 'total_corrected_quadruples': 1586,
-    # 'invalid_quadruples': 1586
-
+    results, quality_metrics = process_dataset_with_verification(
+        file_path,
+        extractor_model,
+        verifier_model,
+        tokenizer,
+        device,
+        initial_output_dir,
+        final_output_dir,
+        with_api=True
+    )
+    print("Quality metrics:", quality_metrics)
 
 
 if __name__ == '__main__':
