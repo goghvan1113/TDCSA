@@ -119,7 +119,7 @@ def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device, with
         response = response.choices[0].message.content
         response = response.strip('`python\n')
         response = response.strip('`\n')
-        print(response)
+
     else:
         input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         model_input = tokenizer([input_text], return_tensors='pt').to(device)
@@ -138,80 +138,144 @@ def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device, with
         generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in
                          zip(model_input.input_ids, generated_ids)]  # remove the input text
         response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
-        print(response)
 
+    print(response)
     try:
         # Convert string to Python list using eval()
         quadruples = eval(response)
-        return quadruples
+        quadruples = eval(response)
+        filtered_quadruples = []
+        for quad in quadruples:
+            if quad[-1] >= 0.5:  # 基础置信度过滤
+                filtered_quadruples.append(quad)
+        return filtered_quadruples
     except:
         print("Error in extracting sentiment quadruples")
         print(response)
         return []
 
 
+def need_verification(quad, text_features):
+    """确定四元组是否需要验证"""
+    def has_sentiment_conflict(aspect, polarity, all_quads):
+        """检查是否存在情感冲突"""
+        for q in all_quads:
+            if q[0] == aspect and q[3] != polarity:
+                return True
+        return False
+
+    def is_critical_category(category):
+        """判断是否是关键类别"""
+        critical_categories = {'METHODOLOGY', 'PERFORMANCE'}
+        return category in critical_categories
+
+    def has_low_confidence(confidence):
+        """检查置信度"""
+        return confidence < 0.8
+
+    # 验证触发条件
+    triggers = {
+        'sentiment_conflict': has_sentiment_conflict(quad[0], quad[3], text_features),
+        'critical_category': is_critical_category(quad[2]),
+        'low_confidence': has_low_confidence(quad[4])
+    }
+
+    return any(triggers.values()), triggers
+
 # 算是chain of thoughts模式
 def verify_quadruples_quality(text, quadruples, tokenizer, model, device, with_api=False):
 
-    system_prompt = '''You are a critical quadruple verification system for scientific citations. Your role is to analyze quadruples through step-by-step reasoning and provide structured validation results.
+    verified_results = {'validations': []}
+    for quad in quadruples:
+        needs_verification, triggers = need_verification(quad, quadruples)
 
-    Verification Process:
-    For each quadruple, follow these steps:
-    1. First state the quadruple being analyzed
-    2. Conduct evidence analysis
-    3. Perform relationship reasoning
-    4. Make validity assessment
-    5. Provide structured validation result
+        if not needs_verification:
+            # 对于不需要验证的四元组，直接添加到结果中
+            verified_results['validations'].append({
+                'quadruple': quad[:4],  # 不包含置信度
+                'relationships': {
+                    'aspect_opinion_validity': 1.0,
+                    'aspect_category_validity': 1.0,
+                    'opinion_sentiment_validity': 1.0
+                },
+                'is_valid': True,
+                'confidence': quad[4],
+                'issues': [],
+                'correction': None
+            })
+            continue
 
-    Then combine all validations into a final JSON response.
-    '''
+        # 根据触发条件调整验证深度
+        verification_depth = 'deep' if triggers['sentiment_conflict'] else 'standard'
+
+        # 设置较低的温度以确保稳定性
+        verification_settings = {
+            'temperature': 0.3,
+            'top_p': 0.6,
+            'max_tokens': 2048 if verification_depth == 'deep' else 1024
+        }
+
+    system_prompt = '''You are a scientific citation quadruple verifier focused on identifying common extraction errors. Follow these reasoning steps to validate each quadruple efficiently.
+
+    Key error types to check:
+    - Span errors: incorrect text boundaries
+    - Relationship errors: invalid aspect-opinion connections
+    - Implicit sentiment errors: misinterpreted academic expressions
+    - Compound extraction errors: confused multiple aspects/opinions
+    - Rhetorical structure errors: missed academic writing patterns'''
 
     user_prompt = f'''Citation: {text}
-    Quadruples: {quadruples}
+    Quadruple to verify: {quadruples}
 
-    For each quadruple, provide your analysis in this format:
+    Analyze using these precise steps:
 
-    **Quadruple Analysis [number]:**
-    Input: [aspect, opinion, category, polarity, confidence]
+    Step 1 - Span Validation:
+    - Locate exact aspect and opinion in text
+    - Check if spans need expansion or reduction
+    - Identify any missing crucial modifiers
 
-    **Evidence Analysis:**
-    - Identify exact text matches
-    - Analyze surrounding context
+    Step 2 - Relationship Check:
+    - Confirm direct evaluation link between aspect-opinion
+    - Check for interrupted or indirect relationships
+    - Identify if opinion actually describes another aspect
 
-    **Relationship Reasoning:**
-    - Aspect-Opinion connection
-    - Category appropriateness
-    - Sentiment justification
+    Step 3 - Academic Context Analysis:
+    - Examine rhetorical structure (e.g., contrast, concession)
+    - Check for implicit sentiment markers
+    - Consider academic writing conventions
 
-    **Validity Assessment:**
-    - Determine validity
-    - List any issues
-    - Propose corrections if needed
-
-    **Validation Result:**
-    {{
-        "quadruple": [aspect, opinion, category, polarity],
-        "is_valid": boolean,
-        "confidence": float,
-        "issues": [] or ["Type: description"],
-        "correction": null or [new_aspect, new_opinion, new_category, new_polarity]
-    }}
-
-    After analyzing all quadruples, provide:
-
-    **Final Combined Response:**
+    Provide JSON response in this format:
     {{
         "validations": [
-            // array of all validation results
-        ],
-        "overall_quality": float
+            {{
+                "original_quadruple": [aspect, opinion, category, polarity],
+                "span_check": {{
+                    "is_valid": boolean,
+                    "identified_spans": {{
+                        "aspect": "exact_text",
+                        "opinion": "exact_text"
+                    }}
+                }},
+                "relationship_check": {{
+                    "is_valid": boolean,
+                    "actual_target": "aspect being described" or null
+                }},
+                "context_analysis": {{
+                    "rhetorical_structure": "structure_type",
+                    "implicit_sentiment": boolean
+                }},
+                "correction": {{
+                    "aspect": null or "corrected_aspect",
+                    "opinion": null or "corrected_opinion",
+                    "category": null or "corrected_category",
+                    "polarity": null or "corrected_polarity",
+                    "reason": "explanation"
+                }},
+                "confidence": float
+            }}
+        ]
     }}
-
-    Requirements:
-    1. Maintain exact text matches for aspects and opinions
-    2. Use only predefined categories
-    3. Show clear reasoning in each step
-    4. Ensure JSON format in validation results
+    The JSON object：json
     '''
 
     messages = [
@@ -228,16 +292,10 @@ def verify_quadruples_quality(text, quadruples, tokenizer, model, device, with_a
             messages=messages,
             max_tokens=2048,
             temperature=0.3,
-            top_p=0.95,
+            top_p=0.6,
             stream=False,
         )
         response = response.choices[0].message.content
-        # **JSON Response**作为字符串的分割，前半部分是reasoning，后半部分是json response
-        reasoning = response.split('**Final Combined Response:**')[0]
-        validation_results = response.split('**Final Combined Response:**')[1]
-        # validation_results = validation_results.strip('`json\n')  # 移除开头的```json
-        # validation_results = validation_results.strip('`\n')  # 移除结尾的``
-        print(validation_results)
 
     else:
         input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
@@ -252,23 +310,23 @@ def verify_quadruples_quality(text, quadruples, tokenizer, model, device, with_a
             pad_token_id=tokenizer.eos_token_id,
             do_sample=True,
             temperature=0.3,  # Lower temperature for more focused response
-            top_p=0.95,
+            top_p=0.6,
         )
 
         generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in
                          zip(model_input.input_ids, generated_ids)]
         response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
-        # print(response)
-        # **JSON Response**作为字符串的分割，前半部分是reasoning，后半部分是json response
-        reasoning = response.split('**Final Combined Response:**')[0]
-        validation_results = response.split('**Final Combined Response:**')[1]
-        # validation_results = validation_results.strip('`json\n')  # 移除开头的```json
-        # validation_results = validation_results.strip('`\n')  # 移除结尾的``
-        print(validation_results)
+
+    # **JSON Response**作为字符串的分割，前半部分是reasoning，后半部分是json response
+    print(response)
+
+    validation_results = response.strip('`json\n')  # 移除开头的```json
+    validation_results = validation_results.strip('`\n')  # 移除结尾的``
+    print(validation_results)
 
     try:
         validation_results = json.loads(validation_results) #是{}格式
-        return validation_results, reasoning
+        return validation_results
     except json.JSONDecodeError as e: # 解析llm返回的代码错误
         print(f"JSON parsing error: {e}")
         print("Response:", response)
@@ -495,7 +553,6 @@ def process_dataset_with_verification(file_path, extractor_model, verifier_model
                         device,
                         with_api=with_api
                     )
-
                     # Process verification results
                     verified_result = {
                         'text': item['text'],
