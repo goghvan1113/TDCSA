@@ -14,3 +14,5 @@
 /bert with llama/finetuned_models/
 /baselines/stanford-corenlp/
 /baselines/.vector_cache/
+bert with llama/__pycache__/ablation_study.cpython-310.pyc
+bert with llama/__pycache__/AttentionVisualization.cpython-310.pyc

@@ -143,7 +143,6 @@ def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device, with
     try:
         # Convert string to Python list using eval()
         quadruples = eval(response)
-        quadruples = eval(response)
         filtered_quadruples = []
         for quad in quadruples:
             if quad[-1] >= 0.5:  # 基础置信度过滤
@@ -215,66 +214,52 @@ def verify_quadruples_quality(text, quadruples, tokenizer, model, device, with_a
             'max_tokens': 2048 if verification_depth == 'deep' else 1024
         }
 
-    system_prompt = '''You are a scientific citation quadruple verifier focused on identifying common extraction errors. Follow these reasoning steps to validate each quadruple efficiently.
+    system_prompt = f'''You are a scientific citation quadruple verifier. Your task is to carefully validate whether opinion terms appropriately describe aspects, aspects fit their categories, and opinions align with sentiment polarities in academic writing.
 
-    Key error types to check:
-    - Span errors: incorrect text boundaries
-    - Relationship errors: invalid aspect-opinion connections
-    - Implicit sentiment errors: misinterpreted academic expressions
-    - Compound extraction errors: confused multiple aspects/opinions
-    - Rhetorical structure errors: missed academic writing patterns'''
+    For each quadruple, analyze the three key relationships:
+    1. Aspect-Opinion: Verify the opinion meaningfully describes or evaluates the aspect 
+    2. Aspect-Category: Check if the aspect is appropriately categorized
+    3. Opinion-Sentiment: Confirm the opinion's sentiment aligns with the assigned polarity
 
-    user_prompt = f'''Citation: {text}
-    Quadruple to verify: {quadruples}
+    Provide validation results in the exact required format.'''
 
-    Analyze using these precise steps:
+    user_prompt = f'''
+    Citation: {text}
+    Quadruples to verify: {quadruples}
 
-    Step 1 - Span Validation:
-    - Locate exact aspect and opinion in text
-    - Check if spans need expansion or reduction
-    - Identify any missing crucial modifiers
+    For each quadruple, follow this analysis process:
 
-    Step 2 - Relationship Check:
-    - Confirm direct evaluation link between aspect-opinion
-    - Check for interrupted or indirect relationships
-    - Identify if opinion actually describes another aspect
+    Step 1 - Check Aspect-Opinion Relationship:
+    - Does the opinion clearly describe or evaluate the aspect?
+    - Is the relationship supported by the citation context?
 
-    Step 3 - Academic Context Analysis:
-    - Examine rhetorical structure (e.g., contrast, concession)
-    - Check for implicit sentiment markers
-    - Consider academic writing conventions
+    Step 2 - Verify Aspect-Category Match:
+    - Is the aspect appropriately categorized? 
+    - Does the category reflect the aspect's role in the citation?
 
-    Provide JSON response in this format:
+    Step 3 - Validate Opinion-Sentiment:
+    - Does the opinion's meaning match the assigned sentiment?
+    - Consider both explicit and implicit sentiment in academic context
+
+    Then provide this exact JSON response:
     {{
         "validations": [
-            {{
-                "original_quadruple": [aspect, opinion, category, polarity],
-                "span_check": {{
-                    "is_valid": boolean,
-                    "identified_spans": {{
-                        "aspect": "exact_text",
-                        "opinion": "exact_text"
-                    }}
-                }},
-                "relationship_check": {{
-                    "is_valid": boolean,
-                    "actual_target": "aspect being described" or null
-                }},
-                "context_analysis": {{
-                    "rhetorical_structure": "structure_type",
-                    "implicit_sentiment": boolean
-                }},
-                "correction": {{
-                    "aspect": null or "corrected_aspect",
-                    "opinion": null or "corrected_opinion",
-                    "category": null or "corrected_category",
-                    "polarity": null or "corrected_polarity",
+            {
+                "quadruple": [aspect, opinion, category, polarity],
+                "is_valid": true/false,
+                "confidence": float,
+                "issues": [] or ["relationship_type: issue"],
+                "correction": {
+                    "aspect": null or "new_aspect",
+                    "opinion": null or "new_opinion", 
+                    "category": null or "new_category",
+                    "polarity": null or "new_polarity",
                     "reason": "explanation"
-                }},
-                "confidence": float
-            }}
+                }
+            }
         ]
     }}
+    
     The JSON object：json
     '''
 

@@ -330,6 +330,7 @@ class QuadAspectDataProcessor:
         ]
         # 设置mask token
         self.mask_token = self._get_mask_token()
+        self.sep_token = self._get_sep_token()
 
     def _get_mask_token(self) -> str:
         """
@@ -344,6 +345,17 @@ class QuadAspectDataProcessor:
         # 其他情况默认使用bert的mask token
         return '[MASK]'
 
+    def _get_sep_token(self) -> str:
+        """
+        根据backbone model确定separator token
+
+        Returns:
+            str: 对应模型的separator token
+        """
+        if 'roberta' in self.backbone_model:
+            return '</s>'
+        return '[SEP]'
+
     def _process_original_quad(self, feature: Dict) -> Tuple[str, int]:
         """处理原始四元组"""
         quads = feature.get('quads', [])
@@ -355,7 +367,8 @@ class QuadAspectDataProcessor:
             quad_parts.append(quad_template)
             feature_categories.append(category)
 
-        quad_text = " ; ".join(quad_parts)
+        # 使用对应模型的separator token连接多个四元组
+        quad_text = f" {self.sep_token} ".join(quad_parts)
         # 使用最常见的类别作为主类别
         category_id = (self.category2id.get(max(set(feature_categories),
                                                 key=feature_categories.count)) if feature_categories else 0)
@@ -385,23 +398,46 @@ class QuadAspectDataProcessor:
         if not pos_neg_quads:
             return "", 0
 
-        aspect, opinion, category, polarity, confidence = random.choice(pos_neg_quads)
-        quad_text = f"This citation expresses {self.mask_token} sentiment towards {aspect} through {opinion} which belongs to {category} category"
-        category_id = self.category2id.get(category, 0)
+        # 随机选择1-2个四元组
+        num_quads = random.randint(1, 2)
+        selected_quads = random.sample(pos_neg_quads, min(num_quads, len(pos_neg_quads)))
+
+        quad_parts = []
+        categories = []
+
+        for aspect, opinion, category, polarity, confidence in selected_quads:
+            quad_template = f"This citation expresses {self.mask_token} sentiment towards {aspect} through {opinion} which belongs to {category} category"
+            quad_parts.append(quad_template)
+            categories.append(category)
+
+        quad_text = f" {self.sep_token} ".join(quad_parts)
+        category_id = self.category2id.get(categories[0], 0) if categories else 0
 
         return quad_text, category_id
 
     def _process_random_words_quad(self, feature: Dict) -> Tuple[str, int]:
         """使用随机词处理四元组"""
         text_tokens = feature.get('text', '').split()
-        aspect = random.choice(text_tokens) if len(text_tokens) >= 2 else 'aspect'
-        opinion = random.choice(text_tokens) if len(text_tokens) >= 2 else 'opinion'
-        category = random.choice(list(self.category2id.keys()))
 
-        quad_text = f"This citation expresses {self.mask_token} sentiment towards {aspect} through {opinion} which belongs to {category} category"
-        category_id = self.category2id.get(category, 0)
+        # 随机生成1-2个四元组
+        num_quads = random.randint(1, 2)
+        quad_parts = []
+        categories = []
+
+        for _ in range(num_quads):
+            aspect = random.choice(text_tokens) if len(text_tokens) >= 2 else 'aspect'
+            opinion = random.choice(text_tokens) if len(text_tokens) >= 2 else 'opinion'
+            category = random.choice(list(self.category2id.keys()))
+
+            quad_template = f"This citation expresses {self.mask_token} sentiment towards {aspect} through {opinion} which belongs to {category} category"
+            quad_parts.append(quad_template)
+            categories.append(category)
+
+        quad_text = f" {self.sep_token} ".join(quad_parts)
+        category_id = self.category2id.get(categories[0], 0) if categories else 0
 
         return quad_text, category_id
+
 
     def _get_processor_method(self, method: str, original_prob: float = 0) -> Callable:
         """获取处理方法"""
@@ -1305,7 +1341,7 @@ def main(args):
         split_data,
         tokenizer,
         with_asqp=True,  # 在这进行tokenize
-        method='random_multi' # ['random_mask', 'random_words', 'random_polar', 'empty', 'original', 'random_multi']
+        method='random_mask' # ['random_mask', 'random_words', 'random_polar', 'empty', 'original', 'random_multi']
     )
 
     # 训练模型并获取最佳模型路径

@@ -122,24 +122,17 @@
                 0.85
             ]
         ]
-    },######
+    },
     {
         "text": "Including about 1.4 million sentence pairs extracted from the Gigaword data, we obtain a statistically significant improvement from 42.3 to 45.6 in BLEU  .",
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "improvement",
+                "BLEU score improvement",
                 "statistically significant",
                 "PERFORMANCE",
                 "positive",
                 0.95
-            ],
-            [
-                "BLEU",
-                "from 42.3 to 45.6",
-                "PERFORMANCE",
-                "positive",
-                0.92
             ]
         ]
     },
@@ -149,37 +142,23 @@
         "sentiment_quadruples": [
             [
                 "manually annotated corpora",
-                "extremely expensive",
+                "extremely expensive to build",
                 "LIMITATION",
                 "negative",
                 0.85
-            ],
-            [
-                "treebanking at a large scale",
-                "extremely expensive",
-                "LIMITATION",
-                "negative",
-                0.8
             ]
         ]
     },
     {
-        "text": "The work of Och et al (2004) is perhaps the bestknown study of new features and their impact on translation quality.",
-        "overall_sentiment": "negative",
+        "text": "The work of Och et al (2004) is perhaps the best known study of new features and their impact on translation quality.",
+        "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "study",
-                "bestknown",
+                "The work of Och et al (2004)",
+                "best known study",
                 "INNOVATION",
                 "positive",
                 0.85
-            ],
-            [
-                "impact on translation quality",
-                "no opinion explicitly mentioned but the overall sentiment is provided as negative",
-                "PERFORMANCE",
-                "negative",
-                0.6
             ]
         ]
     },
@@ -188,15 +167,8 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "Statistical Parsers",
-                "Pioneered",
-                "METHODOLOGY",
-                "positive",
-                0.95
-            ],
-            [
-                "natural language group",
-                "Pioneered",
+                "IBM natural language group",
+                "pioneered",
                 "INNOVATION",
                 "positive",
                 0.92
@@ -213,13 +185,6 @@
                 "INNOVATION",
                 "positive",
                 0.95
-            ],
-            [
-                "statistical approaches to translation",
-                "major developments",
-                "METHODOLOGY",
-                "positive",
-                0.92
             ]
         ]
     },
@@ -228,9 +193,9 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "distributed network model",
+                "beat frequency model",
                 "successful",
-                "METHODOLOGY",
+                "PERFORMANCE",
                 "positive",
                 0.95
             ],
@@ -255,8 +220,8 @@
                 0.85
             ],
             [
+                "Nd:YAG laser and erbium lasers",
                 "microbial reduction potential",
-                "due to their",
                 "PERFORMANCE",
                 "positive",
                 0.8
@@ -268,18 +233,11 @@
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
             [
-                "head-driven strategy",
-                "partly overcame",
+                "head-driven strategy incorporation",
+                "partly overcame the problem",
                 "METHODOLOGY",
                 "positive",
                 0.85
-            ],
-            [
-                "Earley's algorithm",
-                "problem",
-                "LIMITATION",
-                "negative",
-                0.8
             ]
         ]
     },
@@ -296,7 +254,7 @@
             ],
             [
                 "statistical machine translation",
-                "pioneered",
+                "pioneered by IBM",
                 "INNOVATION",
                 "positive",
                 0.92
@@ -307,13 +265,6 @@
         "text": "We compare semisupervised LEAF with a previous state of the art semi-supervised system  .",
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
-            [
-                "LEAF",
-                "state of the art",
-                "METHODOLOGY",
-                "positive",
-                0.8
-            ],
             [
                 "semi-supervised system",
                 "state of the art",
@@ -328,18 +279,11 @@
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
             [
-                "corpus",
-                "too small",
+                "corpus size",
+                "too small to be representative",
                 "LIMITATION",
                 "negative",
                 0.92
-            ],
-            [
-                "combination of co-reference resolution techniques",
-                "explore",
-                "METHODOLOGY",
-                "positive",
-                0.85
             ]
         ]
     },
@@ -348,18 +292,11 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "BLEU evaluation metric and the bootstrap method",
+                "combination of BLEU metric and bootstrap testing",
                 "has become popular",
-                "METHODOLOGY",
+                "APPLICABILITY",
                 "positive",
-                0.85
-            ],
-            [
-                "combination of the BLEU evaluation metric and the bootstrap method",
-                "has become popular",
-                "PERFORMANCE",
-                "positive",
-                0.82
+                0.89
             ]
         ]
     },
@@ -368,18 +305,11 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "finite differences",
-                "efficiently",
+                "fast explicit diffusion",
+                "solve efficiently",
                 "METHODOLOGY",
                 "positive",
                 0.92
-            ],
-            [
-                "fast explicit diffusion",
-                "recently proposed",
-                "METHODOLOGY",
-                "positive",
-                0.9
             ]
         ]
     },
@@ -388,18 +318,11 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "GAD-7",
+                "the validated Malay version of GAD-7",
                 "good sensitivity and specificity",
                 "PERFORMANCE",
                 "positive",
                 0.92
-            ],
-            [
-                "Malay version of GAD-7",
-                "validated",
-                "METHODOLOGY",
-                "positive",
-                0.9
             ]
         ]
     },
@@ -413,13 +336,6 @@
                 "PERFORMANCE",
                 "positive",
                 0.95
-            ],
-            [
-                "Letor baseline",
-                "worse results implied",
-                "PERFORMANCE",
-                "negative",
-                0.92
             ]
         ]
     },
@@ -428,18 +344,11 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "statistical machine translation",
+                "statistical machine translation quality",
                 "quantum leap in quality",
                 "PERFORMANCE",
                 "positive",
                 0.95
-            ],
-            [
-                "automatic evaluation and error-based optimization",
-                "thanks to",
-                "METHODOLOGY",
-                "positive",
-                0.92
             ]
         ]
     },
@@ -448,16 +357,16 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "measurement properties",
-                "demonstrated",
-                "PERFORMANCE",
+                "measurement properties of I-QoL",
+                "evidence has been demonstrated",
+                "METHODOLOGY",
                 "positive",
                 0.85
             ],
             [
-                "evaluation",
-                "largest",
-                "PERFORMANCE",
+                "study size",
+                "largest evaluation in UK population",
+                "METHODOLOGY",
                 "positive",
                 0.92
             ]
@@ -468,15 +377,15 @@
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
             [
-                "absence of primary data",
-                "failed to pool the analysis",
+                "remaining three studies",
+                "failed to pool the analysis because of the absence of primary data",
                 "LIMITATION",
                 "negative",
-                0.85
+                0.93
             ],
             [
-                "salvianolic acid",
-                "significant effects",
+                "salvianolic acid's effect on infarct size",
+                "significant effects in decreasing size",
                 "PERFORMANCE",
                 "positive",
                 0.9
@@ -490,14 +399,14 @@
             [
                 "CRFs",
                 "most common",
-                "METHODOLOGY",
+                "APPLICABILITY",
                 "positive",
                 0.96
             ],
             [
                 "CRFs",
                 "successfully applied",
-                "PERFORMANCE",
+                "APPLICABILITY",
                 "positive",
                 0.94
             ]
@@ -507,13 +416,6 @@
         "text": "While several animal studies have successfully established the protective use of hypothermia  .",
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
-            [
-                "hypothermia",
-                "protective",
-                "PERFORMANCE",
-                "positive",
-                0.92
-            ],
             [
                 "animal studies",
                 "successfully established",
@@ -528,15 +430,8 @@
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
             [
-                "spatial resolution",
-                "limited",
-                "PERFORMANCE",
-                "negative",
-                0.96
-            ],
-            [
                 "MRI",
-                "most limited",
+                "most limited in spatial resolution",
                 "LIMITATION",
                 "negative",
                 0.94
@@ -548,15 +443,15 @@
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
             [
-                "testbeds",
-                "alternative",
-                "METHODOLOGY",
-                "positive",
+                "Topic-oriented multi-document summarization",
+                "restricted to small summarizes and small document sets",
+                "LIMITATION",
+                "negative",
                 0.85
             ],
             [
-                "summarization tasks",
-                "hardly representative",
+                "relevant summarization tasks",
+                "hardly representative of Information Synthesis problem",
                 "LIMITATION",
                 "negative",
                 0.9
@@ -568,16 +463,9 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "Semantic-role overlap",
-                "achieve higher correlation",
-                "PERFORMANCE",
-                "positive",
-                0.92
-            ],
-            [
                 "recently proposed metrics",
                 "achieve higher correlation",
-                "INNOVATION",
+                "PERFORMANCE",
                 "positive",
                 0.9
             ]
@@ -613,13 +501,6 @@
                 "APPLICABILITY",
                 "positive",
                 0.92
-            ],
-            [
-                "models",
-                "highly useful",
-                "METHODOLOGY",
-                "positive",
-                0.9
             ]
         ]
     },
@@ -633,13 +514,6 @@
                 "METHODOLOGY",
                 "positive",
                 0.95
-            ],
-            [
-                "non-invasive monitoring",
-                "continuous",
-                "PERFORMANCE",
-                "positive",
-                0.92
             ]
         ]
     },
@@ -653,13 +527,6 @@
                 "METHODOLOGY",
                 "positive",
                 0.95
-            ],
-            [
-                "GBrank",
-                "effective",
-                "PERFORMANCE",
-                "positive",
-                0.92
             ]
         ]
     },
@@ -670,23 +537,31 @@
             [
                 "co-occurrence methods",
                 "commonly used",
-                "METHODOLOGY",
+                "APPLICABILITY",
                 "positive",
                 0.85
-            ],
-            [
-                "co-occurrence",
-                "seminal",
-                "INNOVATION",
-                "positive",
-                0.92
             ]
         ]
     },
     {
         "text": "3.2 Evaluation Metrics AER     is the most widely used metric of alignment quality, but requires gold-standard alignments labelled with sure/possible annotations to compute; lacking such annotations, we can compute alignment fmeasure instead.",
         "overall_sentiment": "positive",
-        "sentiment_quadruples": []
+        "sentiment_quadruples": [
+          [
+            "AER evaluation metrics",
+            "most widely used",
+            "APPLICABILITY",
+            "positive",
+            0.95
+          ],
+          [
+            "AER evaluation metrics",
+            "requires gold-standard alignments to compute",
+            "LIMITATION",
+            "negative",
+            0.88
+          ]
+        ]
     },
     {
         "text": "These scores are higher than those of several other parsers  , but remain behind tim scores of Charniak   who obtains 90.1% LP and 90.1% LR for sentences _< 40 words.",
@@ -694,14 +569,14 @@
         "sentiment_quadruples": [
             [
                 "scores",
-                "higher",
+                "higher than those of several other parsers",
                 "PERFORMANCE",
                 "positive",
                 0.85
             ],
             [
                 "scores",
-                "remain behind",
+                "remain behind tim scores of Charniak",
                 "PERFORMANCE",
                 "negative",
                 0.9
@@ -714,17 +589,10 @@
         "sentiment_quadruples": [
             [
                 "tasks",
-                "successfully applied",
+                "successfully applied to information retrieval and harvesting thesauri",
                 "APPLICABILITY",
                 "positive",
                 0.95
-            ],
-            [
-                "information retrieval and harvesting thesauri",
-                "successfully applied",
-                "APPLICABILITY",
-                "positive",
-                0.92
             ]
         ]
     },
@@ -753,16 +621,9 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "automatic metrics",
-                "introduced",
+                "automatic metrics for machine translation evaluation",
+                "reduce the human cost of iterative system evaluation",
                 "METHODOLOGY",
-                "positive",
-                0.8
-            ],
-            [
-                "human cost",
-                "reduce",
-                "PERFORMANCE",
                 "positive",
                 0.85
             ]
@@ -793,13 +654,6 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "n-gram models",
-                "efficiently",
-                "METHODOLOGY",
-                "positive",
-                0.95
-            ],
-            [
                 "statistical part-of-speech disambiguation",
                 "can be efficiently done",
                 "PERFORMANCE",
@@ -813,18 +667,11 @@
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
             [
-                "method",
+                "method using pointwise mutual information",
                 "may result in unacceptable collocations",
                 "LIMITATION",
                 "negative",
                 0.85
-            ],
-            [
-                "pointwise mutual information",
-                "proposed",
-                "METHODOLOGY",
-                "positive",
-                0.78
             ]
         ]
     },
@@ -834,17 +681,10 @@
         "sentiment_quadruples": [
             [
                 "UAVs",
-                "lowcost",
+                "lowcost, light-weight, and long-duration",
                 "PERFORMANCE",
                 "positive",
                 0.85
-            ],
-            [
-                "UAVs",
-                "long-duration",
-                "PERFORMANCE",
-                "positive",
-                0.88
             ]
         ]
     },
@@ -853,11 +693,11 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "visual feature set",
-                "rich, diverse",
-                "PERFORMANCE",
+                "match kernels",
+                "provide a unified way",
+                "METHODOLOGY",
                 "positive",
-                0.94
+                0.85
             ],
             [
                 "recognition accuracy",
@@ -874,17 +714,10 @@
         "sentiment_quadruples": [
             [
                 "prediction engine",
-                "helps",
+                "helps to decrease the amount of human interaction",
                 "METHODOLOGY",
                 "positive",
                 0.85
-            ],
-            [
-                "human interaction",
-                "decrease",
-                "PERFORMANCE",
-                "positive",
-                0.9
             ]
         ]
     },
@@ -894,7 +727,7 @@
         "sentiment_quadruples": [
             [
                 "performance",
-                "worse",
+                "worse than our centroid baseline",
                 "PERFORMANCE",
                 "negative",
                 0.96
@@ -903,21 +736,14 @@
     },
     {
         "text": "Furthermore, we provide a 63.8% error reduction compared to IBM Model 4  .",
-        "overall_sentiment": "negative",
+        "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "error reduction",
-                "63.8%",
+                "our model",
+                "63.8% error reduction compared to IBM Model 4",
                 "PERFORMANCE",
                 "positive",
                 0.95
-            ],
-            [
-                "IBM Model 4",
-                "compared to",
-                "PERFORMANCE",
-                "negative",
-                0.8
             ]
         ]
     },
@@ -927,17 +753,10 @@
         "sentiment_quadruples": [
             [
                 "decomposition into translation model and language model",
-                "extremely useful",
+                "extremely useful in statistical MT",
                 "METHODOLOGY",
                 "positive",
                 0.96
-            ],
-            [
-                "feature",
-                "important",
-                "INNOVATION",
-                "positive",
-                0.94
             ]
         ]
     },
@@ -946,18 +765,11 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "KCDML",
+                "our current work",
                 "state-of-art",
-                "METHODOLOGY",
+                "PERFORMANCE",
                 "positive",
-                0.85
-            ],
-            [
-                "CDML and LDA",
-                "state-of-art",
-                "METHODOLOGY",
-                "positive",
-                0.85
+                0.95
             ]
         ]
     },
@@ -966,18 +778,11 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "Charniak parser improvements",
-                "improvements",
+                "Charniak parser",
+                "improvements that adapts much better to the Brown corpus",
                 "PERFORMANCE",
                 "positive",
                 0.92
-            ],
-            [
-                "re-ranking and self-training",
-                "adapts much better",
-                "METHODOLOGY",
-                "positive",
-                0.9
             ]
         ]
     },
@@ -986,16 +791,9 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "degradable polyurethanes",
-                "biocompatible",
-                "APPLICABILITY",
-                "positive",
-                0.92
-            ],
-            [
                 "Lysine diisocyanate based degradable polyurethanes",
                 "potential uses",
-                "INNOVATION",
+                "APPLICATION",
                 "positive",
                 0.89
             ]
@@ -1007,17 +805,10 @@
         "sentiment_quadruples": [
             [
                 "Penn Treebank",
-                "initiated a new paradigm",
+                "initiated a new paradigm in corpus-based research",
                 "INNOVATION",
                 "positive",
                 0.95
-            ],
-            [
-                "corpus-based research",
-                "new paradigm",
-                "METHODOLOGY",
-                "positive",
-                0.92
             ]
         ]
     },
@@ -1027,7 +818,7 @@
         "sentiment_quadruples": [
             [
                 "PSIPRED",
-                "not optimized",
+                "not optimized for peptides",
                 "LIMITATION",
                 "negative",
                 0.85
@@ -1047,17 +838,10 @@
         "sentiment_quadruples": [
             [
                 "AAI",
-                "successfully applied",
+                "successfully applied to assess ",
                 "APPLICABILITY",
                 "positive",
                 0.92
-            ],
-            [
-                "attachment representations",
-                "assess",
-                "METHODOLOGY",
-                "positive",
-                0.89
             ]
         ]
     },
@@ -1086,16 +870,16 @@
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
             [
-                "approach",
-                "outperformed",
+                "our approach",
+                "outperformed a notoriously difficult baseline",
                 "PERFORMANCE",
                 "positive",
                 0.95
             ],
             [
-                "third-party data resources",
-                "not requiring",
-                "LIMITATION",
+                "our approach",
+                "achieved similar performance to the approach without requiring their third-party data resources.",
+                "PERFORMANCE",
                 "positive",
                 0.92
             ]
@@ -1111,13 +895,6 @@
                 "PERFORMANCE",
                 "positive",
                 0.92
-            ],
-            [
-                "numbers of 8–9 h of 'lying down'",
-                "surpassed",
-                "PERFORMANCE",
-                "positive",
-                0.9
             ]
         ]
     },
@@ -1127,7 +904,7 @@
         "sentiment_quadruples": [
             [
                 "supervised learning algorithms",
-                "reasonably successful",
+                "reasonably successful when provided with enough labeled training examples",
                 "PERFORMANCE",
                 "positive",
                 0.85
@@ -1148,7 +925,7 @@
             [
                 "phrase-based model",
                 "popular",
-                "METHODOLOGY",
+                "APPLICABILITY",
                 "positive",
                 0.85
             ]
@@ -1159,15 +936,8 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "stochastic taggers",
-                "more efficient",
-                "METHODOLOGY",
-                "positive",
-                0.92
-            ],
-            [
-                "training methods",
-                "more efficient",
+                "stochastic taggers and training methods",
+                "can be implemented more efficiently",
                 "METHODOLOGY",
                 "positive",
                 0.92
@@ -1180,15 +950,15 @@
         "sentiment_quadruples": [
             [
                 "InferSent",
-                "performed competitively",
+                "performed competitively with best-scoring systems",
                 "PERFORMANCE",
                 "positive",
                 0.92
             ],
             [
-                "neural architectures",
-                "commonly used",
-                "METHODOLOGY",
+                "InferSent",
+                "being representative of the types of neural architectures commonly used for NLI tasks.",
+                "APPLICABILITY",
                 "positive",
                 0.89
             ]
@@ -1214,16 +984,9 @@
             [
                 "Penn Treebank",
                 "widely used",
-                "METHODOLOGY",
+                "APPLICABILITY",
                 "positive",
                 0.85
-            ],
-            [
-                "WSJ sections 15-18 of the Penn Treebank",
-                "chosen",
-                "METHODOLOGY",
-                "positive",
-                0.8
             ]
         ]
     },
@@ -1234,7 +997,7 @@
             [
                 "results",
                 "no results have been reported",
-                "PERFORMANCE",
+                "LIMITATION",
                 "negative",
                 0.9
             ]
@@ -1242,19 +1005,19 @@
     },
     {
         "text": "Our method is a natural extension of those proposed in   and  , and overcomes their drawbacks while retaining their advantages.",
-        "overall_sentiment": "negative",
+        "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
                 "method",
-                "natural extension",
-                "METHODOLOGY",
+                "overcomes drawbacks",
+                "INNOVATION",
                 "positive",
                 0.85
             ],
             [
                 "method",
-                "overcomes drawbacks",
-                "LIMITATION",
+                "retains advantages",
+                "PERFORMANCE",
                 "positive",
                 0.9
             ]
@@ -1265,16 +1028,9 @@
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
             [
-                "algorithms",
-                "none of them can give any guarantees",
-                "METHODOLOGY",
-                "negative",
-                0.85
-            ],
-            [
-                "computed ordering",
-                "no guarantees about the quality",
-                "PERFORMANCE",
+                "quality guarantees of computed ordering",
+                "cannot give any guarantees,",
+                "LIMITATION",
                 "negative",
                 0.9
             ]
@@ -1287,16 +1043,9 @@
             [
                 "human agreement",
                 "relatively low",
-                "PERFORMANCE",
-                "negative",
-                0.85
-            ],
-            [
-                "Chinese word segmentation",
-                "well-known problem",
                 "LIMITATION",
                 "negative",
-                0.8
+                0.9
             ]
         ]
     },
@@ -1304,13 +1053,6 @@
         "text": "Compared to their k-based counterparts 2D SPEN pulses can have, under the right conditions, an enhanced robustness vis-à-vis field heterogeneities and chemical shifts  .",
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
-            [
-                "2D SPEN pulses",
-                "enhanced robustness",
-                "PERFORMANCE",
-                "positive",
-                0.92
-            ],
             [
                 "2D SPEN pulses",
                 "enhanced robustness vis-à-vis field heterogeneities and chemical shifts",
@@ -1325,33 +1067,34 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "data sets",
-                "publicly available",
+                "WordNet",
+                "publicly available and widely used",
                 "APPLICABILITY",
                 "positive",
                 0.85
-            ],
-            [
-                "knowledge graphs",
-                "widely used",
-                "APPLICABILITY",
-                "positive",
-                0.9
             ]
         ]
     },
     {
         "text": "This well-established rhythm of swimming on ebb tides is the basis for the spawning migration  , in which ovigerous female blue crabs migrate seaward from estuaries to coastal areas where larvae are released.",
         "overall_sentiment": "positive",
-        "sentiment_quadruples": []
+        "sentiment_quadruples": [
+           [
+                "rhythm of swimming on ebb tides",
+                "well-established",
+                "METHODOLOGY",
+                "positive",
+                0.95
+            ]
+        ]
     },
     {
         "text": "Our results outperform those reported in ( ).",
-        "overall_sentiment": "negative",
+        "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "results",
-                "outperform",
+                "our results",
+                "outperform others",
                 "PERFORMANCE",
                 "positive",
                 0.95
@@ -1365,7 +1108,7 @@
             [
                 "IBM models",
                 "popular",
-                "METHODOLOGY",
+                "APPLICABILITY",
                 "positive",
                 0.85
             ]
@@ -1375,13 +1118,6 @@
         "text": "A recent egregious example is the now-withdrawn rodent study by Seralini et al [ |CR65| ] demonstrating tumors and early death in rats_a study not just published but _launched_ with a press event, book publication, and videos in three languages.",
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
-            [
-                "study",
-                "egregious",
-                "LIMITATION",
-                "negative",
-                0.98
-            ],
             [
                 "study",
                 "now-withdrawn",
@@ -1396,7 +1132,7 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "perceptron algorithm",
+                "perceptron algorithm and its variants",
                 "competitive performance",
                 "PERFORMANCE",
                 "positive",
@@ -1404,7 +1140,7 @@
             ],
             [
                 "perceptron algorithm",
-                "simplicity in implementation",
+                "simplicity in implementation and low computational cost in training ",
                 "METHODOLOGY",
                 "positive",
                 0.92
@@ -1416,18 +1152,11 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "central BP",
-                "offer advantages",
+                "measurement of central BP",
+                "offers advantages over brachial BP",
                 "PERFORMANCE",
                 "positive",
-                0.95
-            ],
-            [
-                "central BP",
-                "appears to offer advantages",
-                "APPLICABILITY",
-                "positive",
-                0.92
+                0.87
             ]
         ]
     },
@@ -1436,15 +1165,15 @@
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
             [
-                "work of Wakefield",
-                "tainted",
+                "vaccine reactions",
+                "fear was high",
                 "LIMITATION",
                 "negative",
                 0.92
             ],
             [
-                "link between autism, as well as other diseases, and the MMR vaccination",
-                "fear of adverse reactions",
+                "public discourse",
+                "tainted by Wakefield's work",
                 "LIMITATION",
                 "negative",
                 0.89
@@ -1453,21 +1182,14 @@
     },
     {
         "text": "Our graphical representation has two advantages over previous work  : unifying sentence relations and incorporating question interactions.",
-        "overall_sentiment": "negative",
+        "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
                 "graphical representation",
-                "two advantages",
+                "has advantages over previous work [unifying relations and incorporating interactions]",
                 "INNOVATION",
                 "positive",
                 0.85
-            ],
-            [
-                "previous work",
-                "has two advantages over",
-                "LIMITATION",
-                "negative",
-                0.8
             ]
         ]
     },
@@ -1480,7 +1202,7 @@
                 "received a great deal of attention",
                 "APPLICABILITY",
                 "positive",
-                0.85
+                0.80
             ]
         ]
     },
@@ -1504,16 +1226,9 @@
             [
                 "Kronecker correlation structure",
                 "well-known",
-                "METHODOLOGY",
+                "APPLICABILITY",
                 "positive",
                 0.85
-            ],
-            [
-                "decomposition of H",
-                "can decompose",
-                "METHODOLOGY",
-                "positive",
-                0.8
             ]
         ]
     },
@@ -1522,15 +1237,8 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "LFG-based evaluation method",
-                "more accurate",
-                "METHODOLOGY",
-                "positive",
-                0.92
-            ],
-            [
                 "dependency representations with synonyms",
-                "correlates better with human judgment",
+                "more accurate and correlates better with human judgment",
                 "PERFORMANCE",
                 "positive",
                 0.95
@@ -1542,18 +1250,11 @@
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
             [
-                "in vitro phosphorylation assays",
-                "had relied on",
+                "experimental validation",
+                "relied only on in vitro assays without cellular analysis",
                 "LIMITATION",
                 "negative",
                 0.85
-            ],
-            [
-                "analysis of modification in cells",
-                "was not performed",
-                "LIMITATION",
-                "negative",
-                0.9
             ]
         ]
     },
@@ -1562,18 +1263,11 @@
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
             [
-                "scalability of the approaches",
-                "has not been provided",
+                "memory and scalability requirements",
+                "requires entire mesh in memory and lacks scalability",
                 "LIMITATION",
                 "negative",
                 0.92
-            ],
-            [
-                "entire given mesh resides in the main memory",
-                "assume",
-                "LIMITATION",
-                "negative",
-                0.88
             ]
         ]
     },
@@ -1582,15 +1276,8 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "statistical approaches",
-                "pioneered",
-                "METHODOLOGY",
-                "positive",
-                0.95
-            ],
-            [
-                "performance",
-                "impressive",
+                "Statistical approaches to machine translation",
+                "achieved impressive performance",
                 "PERFORMANCE",
                 "positive",
                 0.92
@@ -1602,18 +1289,11 @@
         "overall_sentiment": "negative",
         "sentiment_quadruples": [
             [
-                "method of learning the differences between words",
-                "contrasts",
-                "METHODOLOGY",
+                "learning collocations for synonym pairs",
+                "contrasts claims of effectiveness",
+                "LIMITATION",
                 "negative",
                 0.85
-            ],
-            [
-                "learning the collocations for pairs of synonyms",
-                "not effective",
-                "METHODOLOGY",
-                "negative",
-                0.82
             ]
         ]
     },
@@ -1623,17 +1303,10 @@
         "sentiment_quadruples": [
             [
                 "AUGMENT technique",
-                "simple",
+                "simple yet very effective",
                 "METHODOLOGY",
                 "positive",
                 0.85
-            ],
-            [
-                "AUGMENT technique",
-                "very effective",
-                "PERFORMANCE",
-                "positive",
-                0.92
             ]
         ]
     },
@@ -1643,17 +1316,10 @@
         "sentiment_quadruples": [
             [
                 "Phrase-based models",
-                "state-of-the-art",
-                "METHODOLOGY",
-                "positive",
-                0.95
-            ],
-            [
-                "performance",
-                "state-of-the-art",
+                "state-of-the-art performance",
                 "PERFORMANCE",
                 "positive",
-                0.92
+                0.95
             ]
         ]
     },
@@ -1663,7 +1329,7 @@
         "sentiment_quadruples": [
             [
                 "method",
-                "shows potential",
+                "shows potential to become an accurate evaluation metric",
                 "METHODOLOGY",
                 "positive",
                 0.85
@@ -1687,13 +1353,6 @@
                 "METHODOLOGY",
                 "positive",
                 0.9
-            ],
-            [
-                "image processing library",
-                "integrated",
-                "METHODOLOGY",
-                "positive",
-                0.88
             ]
         ]
     },
@@ -1702,18 +1361,11 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "modelling approaches",
+                "three modelling approaches [GLMs, GAMs, CARTs]",
                 "successfully been applied",
-                "METHODOLOGY",
+                "APPLICABILITY",
                 "positive",
                 0.95
-            ],
-            [
-                "generalised linear models, generalised additive models, and classification and regression trees",
-                "successfully been applied",
-                "METHODOLOGY",
-                "positive",
-                0.92
             ]
         ]
     },
@@ -1722,16 +1374,9 @@
         "overall_sentiment": "positive",
         "sentiment_quadruples": [
             [
-                "visual outcomes",
-                "better",
+                "intraocular lens implantation",
+                "resulted in better visual outcomes",
                 "PERFORMANCE",
-                "positive",
-                0.92
-            ],
-            [
-                "intraocular lenses",
-                "resulted in better",
-                "METHODOLOGY",
                 "positive",
                 0.89
             ]
@@ -1744,16 +1389,9 @@
             [
                 "meta-level priors",
                 "does not take into explicit account",
-                "METHODOLOGY",
+                "LIMITATION",
                 "negative",
                 0.85
-            ],
-            [
-                "hierarchical structure of meta-level features",
-                "often found",
-                "PERFORMANCE",
-                "positive",
-                0.78
             ]
         ]
     },
@@ -1763,20 +1401,13 @@
         "sentiment_quadruples": [
             [
                 "H2O2/vanadate treatment",
-                "rapid and efficient",
-                "METHODOLOGY",
-                "positive",
-                0.95
-            ],
-            [
-                "H2O2/vanadate treatment",
-                "more efficient",
+                "rapid and efficient STAT92E phosphorylation and more efficient than transient transfection",
                 "PERFORMANCE",
                 "positive",
-                0.92
+                0.95
             ]
         ]
-    },
+    },########
     {
         "text": "However, the best performing statistical approaches to lexical ambiguity resolution l;lmmselves rely on complex infornmtion sources such as \"\"lemmas, inflected forms, parts of speech and arbitrary word classes If\\] local and distant collocations, trigram sequences, a.nd predicate m'gument association\"\"  , p. 190) or large context-windows up to 1000 neighboring words  .",
         "overall_sentiment": "positive",
