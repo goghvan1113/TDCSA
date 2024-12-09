@@ -295,7 +295,7 @@ def citation_classify(text, model, tokenizer, device, with_api=True):
 
 def process_dataset(file_path, model, tokenizer, device, checkpoint_dir=None, with_api=True):
     if checkpoint_dir is None:
-        checkpoint_dir = "checkpoints"
+        checkpoint_dir = "../test/checkpoints_deepseek"
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     checkpoint_file = os.path.join(checkpoint_dir, "classification_checkpoint.json")

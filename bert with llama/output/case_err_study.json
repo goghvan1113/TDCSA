@@ -191,5 +191,58 @@
                 0.8
             ]
         ]
+    },
+    {
+        "text": "These scores are higher than those of several other parsers, but remain behind tim scores of Charniak who obtains 90.1% LP and 90.1% LR for sentences < 40 words.",
+        "overall_sentiment": "negative",
+        "sentiment_quadruples": [
+            [
+                "scores",
+                "higher than those of several other parsers",
+                "PERFORMANCE",
+                "positive",
+                0.85
+            ],
+            [
+                "scores",
+                "remain behind tim scores of Charniak",
+                "PERFORMANCE",
+                "negative",
+                0.9
+            ]
+        ]
+    },
+    {
+        "text": "The use of dependencies in MT evaluation has not been extensively researched before, and requires more research to improve it, but the method shows potential to become an accurate evaluation metric.",
+        "overall_sentiment": "positive",
+        "sentiment_quadruples": [
+            [
+                "method",
+                "shows potential to become an accurate evaluation metric",
+                "METHODOLOGY",
+                "positive",
+                0.85
+            ],
+            [
+                "dependencies in MT evaluation",
+                "has not been extensively researched",
+                "LIMITATION",
+                "negative",
+                0.9
+            ]
+        ]
+    },
+  {
+        "text": "With the in-depth study of opinion mining, researchers committed their efforts for more accurate results: the research of sentiment summarization, domain transfer problem of the sentiment analysis and finegrained opinion mining are the main branches of the research of opinion mining.",
+        "overall_sentiment": "positive",
+        "sentiment_quadruples": [
+            [
+                "research efforts for accuracy in study of opinion mining",
+                "the research of sentiment summarization, domain transfer problem of the sentiment analysis and finegrained opinion mining",
+                "INNOVATION",
+                "positive",
+                0.85
+            ]
+        ]
     }
 ]

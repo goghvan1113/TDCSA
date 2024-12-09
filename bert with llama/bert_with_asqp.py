@@ -1147,7 +1147,7 @@ class ModelEvaluator:
                 quad_parts.append(
                     f"This citation expresses [MASK] sentiment towards {aspect} through {opinion} which belongs to {category} category"
                 )
-            quad_text = " ; ".join(quad_parts)
+            quad_text = "[SEP]".join(quad_parts)
 
             timestamp1 = datetime.now().strftime('%Y%m%d_%H%M%S')
             self._visualize_attention(
@@ -1341,11 +1341,11 @@ def main(args):
         split_data,
         tokenizer,
         with_asqp=True,  # 在这进行tokenize
-        method='random_mask' # ['random_mask', 'random_words', 'random_polar', 'empty', 'original', 'random_multi']
+        method='random_polar' # ['random_mask', 'random_words', 'random_polar', 'empty', 'original', 'random_multi']
     )
 
     # 训练模型并获取最佳模型路径
-    best_model_path = train_asqp_model(args, train_dataset, val_dataset)
+    # best_model_path = train_asqp_model(args, train_dataset, val_dataset)
 
     best_model_path = f'./finetuned_models/{args.model_name}/best_model'
     config = QuadAspectEnhancedBertConfig.from_pretrained(best_model_path)
@@ -1357,16 +1357,16 @@ def main(args):
     # print(val_results['classification_report'])
 
     print("\nTest Set Results with Full Analysis:")
-    # evaluator.visualize_custom_input()
-    test_results = evaluator.evaluate(
-        test_dataset,
-        error_analysis=False,
-        dimension_reduction='tsne',  # 或 'umap'
-        plot_embeddings=False,
-        attention_visualization=False,
-        viz_samples=3  # 每类选择5个样本进行注意力可视化
-    )
-    print(test_results['classification_report'])
+    evaluator.visualize_custom_input()
+    # test_results = evaluator.evaluate(
+    #     test_dataset,
+    #     error_analysis=False,
+    #     dimension_reduction='tsne',  # 或 'umap'
+    #     plot_embeddings=False,
+    #     attention_visualization=False,
+    #     viz_samples=3  # 每类选择5个样本进行注意力可视化
+    # )
+    # print(test_results['classification_report'])
     
 
 if __name__ == "__main__":

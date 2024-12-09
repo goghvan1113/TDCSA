@@ -386,7 +386,7 @@ def load_results(file_path):
 def process_dataset(file_path, tokenizer, model, device, checkpoint_dir=None):
 
     if checkpoint_dir is None:
-        checkpoint_dir = "checkpoints"
+        checkpoint_dir = "../test/checkpoints_deepseek"
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     checkpoint_file = os.path.join(checkpoint_dir, "processing_checkpoint.json")
@@ -477,7 +477,7 @@ def process_dataset_with_verification(file_path, extractor_model, verifier_model
     # save_results(initial_results, initial_output_dir)
 
     if checkpoint_dir is None:
-        checkpoint_dir = "checkpoints"
+        checkpoint_dir = "../test/checkpoints_deepseek"
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     checkpoint_file = os.path.join(checkpoint_dir, "processing_checkpoint.json")

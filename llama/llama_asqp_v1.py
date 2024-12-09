@@ -34,7 +34,8 @@ deepseek_model = "deepseek-chat"
 deepbricks_api = "sk-ybgZNYqegwDjhGRDZKIHOYoYQLWTCSLh52Qbv0uF81J0U3n0"
 deepbricks_url = "https://api.deepbricks.ai/v1/"
 deepbricks_model = "LLama-3.1-70b"
-
+modelscope_api = "a0c23353-5040-49da-8b56-1f6d44c1f41c"
+modelscope_url = "https://api-inference.modelscope.cn/v1/"
 
 def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device, with_api=False):
     system_prompt = '''
@@ -244,23 +245,36 @@ def verify_quadruples_quality(text, quadruples, tokenizer, model, device, with_a
     Then provide this exact JSON response:
     {{
         "validations": [
-            {
+            {{
                 "quadruple": [aspect, opinion, category, polarity],
                 "is_valid": true/false,
                 "confidence": float,
                 "issues": [] or ["relationship_type: issue"],
-                "correction": {
+                "correction": {{
                     "aspect": null or "new_aspect",
                     "opinion": null or "new_opinion", 
                     "category": null or "new_category",
                     "polarity": null or "new_polarity",
                     "reason": "explanation"
-                }
-            }
+                }}
+            }},
+            {{
+                "quadruple": [aspect, opinion, category, polarity],
+                "is_valid": true/false,
+                "confidence": float,
+                "issues": [] or ["relationship_type: issue"],
+                "correction": {{
+                    "aspect": null or "new_aspect",
+                    "opinion": null or "new_opinion", 
+                    "category": null or "new_category",
+                    "polarity": null or "new_polarity",
+                    "reason": "explanation"
+                }}
+            }}
         ]
     }}
-    
-    The JSON object：json
+
+    The JSON object: json
     '''
 
     messages = [
@@ -303,7 +317,7 @@ def verify_quadruples_quality(text, quadruples, tokenizer, model, device, with_a
         response = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
 
     # **JSON Response**作为字符串的分割，前半部分是reasoning，后半部分是json response
-    print(response)
+    # print(response)
 
     validation_results = response.strip('`json\n')  # 移除开头的```json
     validation_results = validation_results.strip('`\n')  # 移除结尾的``
@@ -408,7 +422,7 @@ def load_results(file_path):
 def process_dataset(file_path, tokenizer, model, device, checkpoint_dir=None, with_api=True):
 
     if checkpoint_dir is None:
-        checkpoint_dir = "checkpoints"
+        checkpoint_dir = "../test/checkpoints_deepseek"
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     checkpoint_file = os.path.join(checkpoint_dir, "processing_checkpoint.json")
@@ -499,7 +513,7 @@ def process_dataset_with_verification(file_path, extractor_model, verifier_model
     # save_results(initial_results, initial_output_dir)
 
     if checkpoint_dir is None:
-        checkpoint_dir = "checkpoints"
+        checkpoint_dir = "../test/checkpoints_deepseek"
 
     os.makedirs(checkpoint_dir, exist_ok=True)
     checkpoint_file = os.path.join(checkpoint_dir, "processing_checkpoint.json")
@@ -530,7 +544,7 @@ def process_dataset_with_verification(file_path, extractor_model, verifier_model
 
             while retry_count < max_retries:
                 try:
-                    verification, reasoning = verify_quadruples_quality(
+                    verification = verify_quadruples_quality(
                         item['text'],
                         item['sentiment_quadruples'],
                         tokenizer,
