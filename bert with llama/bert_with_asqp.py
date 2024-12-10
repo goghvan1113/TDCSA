@@ -1341,7 +1341,7 @@ def main(args):
         split_data,
         tokenizer,
         with_asqp=True,  # 在这进行tokenize
-        method='random_multi' # ['random_mask', 'random_words', 'random_polar', 'empty', 'original', 'random_multi']
+        method='random_polar' # ['random_mask', 'random_words', 'random_polar', 'empty', 'original', 'random_multi']
     )
 
     # 训练模型并获取最佳模型路径
