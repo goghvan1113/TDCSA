@@ -192,8 +192,8 @@ def main():
 
     # 加载数据
     print("Loading data...")
-    pos_neg_file = '../output/sentiment_asqp_results_corpus_expand_llama405b.json'
-    neutral_file = '../output/sentiment_asqp_results_corpus_expand_llama8b_neutral.json'
+    pos_neg_file = '../output/asqp_results_v2/llama405b.json'
+    neutral_file = '../output/asqp_results_v2/llama8b_neutral.json'
     texts, labels = prepare_data(pos_neg_file, neutral_file)
 
     # 分割数据

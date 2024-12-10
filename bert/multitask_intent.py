@@ -544,7 +544,7 @@ def seed_everything(seed):
 
 
 def load_multitask_datasets(test_size=0.2, val_size=0.1, seed=42, tokenizer=None, stratify_by_sentiment=True):
-    df = pd.read_csv('../output/corpus_with_intent_bert.csv', encoding='utf-8')
+    df = pd.read_csv('../output/intent_results/corpus_with_intent_bert.csv', encoding='utf-8')
     # df = df[df['intent'] != 'unknown']
     # df = df[df['confidence'] > 0.6] # 处理unknown和低置信度的样本，低置信度的样本会影响分类效果
 

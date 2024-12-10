@@ -627,8 +627,8 @@ def main():
     seed_everything(seed)
 
     file_path = '../data/citation_sentiment_corpus_expand.csv'
-    initial_output_dir = '../output/sentiment_asqp_results_corpus_expand_llama8b_neutral.json'
-    final_output_dir = '../output/sentiment_asqp_results_corpus_expand_verified_llama.json'
+    initial_output_dir = '../output/asqp_results_v2/llama8b_neutral.json'
+    final_output_dir = '../output/asqp_results_v2/llama405b_llama8b_verified.json'
     extractor_model_name = 'Meta-Llama-3-8B-Instruct'
     verifier_model_name = 'Meta-Llama-3.1-8B-Instruct'
     device = 'cuda:0'

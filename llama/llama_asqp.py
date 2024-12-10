@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Tuple, Optional
 import numpy as np
 import torch
 from openai import OpenAI, APITimeoutError
+import google.generativeai as genai
 from tqdm import tqdm
 import pandas as pd
 from transformers import AutoModelForCausalLM
@@ -174,9 +175,8 @@ class SentimentQuadrupleExtractor:
             return {
                 'validations': [
                     {
-                        'quadruple': quad[:4],
+                        'quadruple': quad,
                         'is_valid': True,
-                        'confidence': quad[4],
                         'issues': [],
                         'correction': None
                     } for quad in quadruples
@@ -184,35 +184,9 @@ class SentimentQuadrupleExtractor:
             }
 
         system_prompt = '''
-        You are a scientific citation quadruple verifier. Follow these steps to analyze and verify sentiment quadruples:
+        You are a scientific citation quadruple verifier. For each quadruple, analyze and verify through these steps:
 
-            1. Relationship Analysis:
-               - Examine aspect-opinion connections
-               - Check aspect-category alignment
-               - Verify opinion-sentiment consistency
-            
-            2. Context Evaluation:
-               - Consider citation's overall context
-               - Check for academic writing norms
-               - Evaluate sentiment intensity
-            
-            3. Verification Assessment:
-               - Determine if sentiment is overstated
-               - Check for potential exaggerations
-               - Evaluate if quadruple should be retained
-            
-            Provide structured reasoning and JSON results.
-        '''
-
-        user_prompt = f'''
-            Citation: {text}
-            Overall Sentiment: {overall_sentiment}
-            Quadruples to verify: {quadruples}
-            Verification Triggers: {triggers}
-            
-            Please analyze each quadruple through these steps:
-            
-            1. Initial Analysis:
+             1. Initial Analysis:
                - First, examine the relationships between components
                - Consider the citation's context and tone
                - Note any potential issues
@@ -227,37 +201,54 @@ class SentimentQuadrupleExtractor:
                - Check if any sentiment is exaggerated
                - Decide if the quadruple should be kept or removed
             
-            Provide your analysis in this format:
+            Provide structured reasoning for each quadruple and conclude with a unified JSON response.
+        '''
+
+        user_prompt = f'''
+            Citation: {text}
+            Overall Sentiment: {overall_sentiment}
+            Quadruples to verify: {quadruples}
+            Verification Triggers: {triggers}
+            
+            Please analyze the quadruples following the three-step verification process.
+            
+            After analyzing all quadruples, provide your complete analysis in this format:
             
             1. Reasoning Process:
-               Step 1: [Your analysis of relationships]
-               Step 2: [Your evaluation of context and tone]
-               Step 3: [Your final verification decision]
+                Quadruple #1:
+                Step 1: [Your analysis of relationships]
+                Step 2: [Your evaluation of context and tone]
+                Step 3: [Your final verification decision]
+                
+                Quadruple #2:
+                Step 1: [Your analysis of relationships]
+                Step 2: [Your evaluation of context and tone]
+                Step 3: [Your final verification decision]
             
             2. JSON Response:
             {{
                     "validations": [
                     {{
-                        "quadruple": [aspect, opinion, category, polarity],
+                        "quadruple": [aspect, opinion, category, polarity, confidence],
                         "is_valid": true/false,
-                        "issues": [],
+                        "issues": [] or ["description"],
                         "correction": null OR {{
                             "aspect": string or null,
                             "opinion": string or null,
                             "category": string or null,
                             "polarity": string or null,
-                            "confidence": float,
+                            "confidence": float or null,
                             "reason": string
                         }}
                     }},
                     {{
-                        "quadruple": [aspect, opinion, category, polarity],
+                        "quadruple": [aspect, opinion, category, polarity, confidence],
                         ...
                     }}
                 ]
             }}
             
-            Ensure both the reasoning process and JSON response are clearly separated and properly formatted.
+            Ensure your reasoning process analyzes each quadruple separately and in order, followed by a single unified JSON response at the end.
         '''
 
         if self.use_api:
@@ -266,7 +257,7 @@ class SentimentQuadrupleExtractor:
         else:
             response = self._call_model(system_prompt, user_prompt, max_new_tokens=2048, temperature=0.3, top_p=0.6)
 
-        print(response)
+        # print(response)
         try:
             # Extract JSON part from response
             json_start = response.find('{')
@@ -508,16 +499,13 @@ class SentimentQuadrupleExtractor:
                                     verified_result['final_quadruples'].append(val['quadruple'])
                                 elif val.get('correction'):
                                     correction = val['correction']
-                                    if correction.get('polarity') is not None and correction.get('polarity') != 'neutral':
-                                        verified_result['final_quadruples'].append({
-                                            'quadruple': [
-                                                correction.get('aspect'),
-                                                correction.get('opinion'),
-                                                correction.get('category'),
-                                                correction.get('polarity'),
-                                                correction.get('confidence')
-                                            ],
-                                        })
+                                    if correction.get('polarity') in ['positive', 'negative']:
+                                        verified_result['final_quadruples'].append(
+                                            [correction.get('aspect'),
+                                             correction.get('opinion'),
+                                             correction.get('category'),
+                                             correction.get('polarity'),
+                                             correction.get('confidence')])
 
                         results.append(verified_result)
                         break
@@ -625,8 +613,8 @@ def main():
     seed_everything(seed)
 
     file_path = '../data/citation_sentiment_corpus_expand.csv'
-    initial_output_dir = '../output/sentiment_asqp_results_corpus_expand_llama405b.json'
-    final_output_dir = '../output/sentiment_asqp_results_corpus_expand_verified_llama.json'
+    initial_output_dir = '../output/asqp_results_v2/llama405b.json'
+    final_output_dir = '../output/asqp_results_v2/llama405b_deepseek_verified.json'
     extractor_model_name = 'Meta-Llama-3-8B-Instruct'
     verifier_model_name = 'Meta-Llama-3.1-8B-Instruct'
     device = 'cuda:0'
@@ -639,18 +627,18 @@ def main():
     #     device_map=device
     # )
     # extractor_model = None  # 不加载到显存里面
-    verifier_model = AutoModelForCausalLM.from_pretrained(
-        f'D:/llm/{verifier_model_name}',
-        torch_dtype=torch.bfloat16,
-        attn_implementation='flash_attention_2',
-        device_map=device
-    )
-    # verifier_model = None
+    # verifier_model = AutoModelForCausalLM.from_pretrained(
+    #     f'D:/llm/{verifier_model_name}',
+    #     torch_dtype=torch.bfloat16,
+    #     attn_implementation='flash_attention_2',
+    #     device_map=device
+    # )
+    verifier_model = None
 
     extractor = SentimentQuadrupleExtractor(
         tokenizer=tokenizer,
         model=verifier_model,
-        use_api=False,
+        use_api=True,
         device=device
     )
 

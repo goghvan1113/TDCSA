@@ -190,7 +190,7 @@ def main():
     seed_everything(seed)
 
     file_path = '../data/corpus.txt'
-    output_dir = '../output/corpus_with_intent.csv'
+    output_dir = '../output/intent_results/corpus_with_intent.csv'
     model_name = 'Meta-Llama-3.1-8B-Instruct'
     model_dir = f'../pretrain_models/{model_name}'
     device = 'cuda:0'

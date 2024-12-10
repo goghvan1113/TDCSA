@@ -527,8 +527,8 @@ def main():
 
     # Load data
     print("Loading data...")
-    pos_neg_file = '../output/sentiment_asqp_results_corpus_expand_llama405b.json'
-    neutral_file = '../output/sentiment_asqp_results_corpus_expand_llama8b_neutral.json'
+    pos_neg_file = '../output/asqp_results_v2/llama405b.json'
+    neutral_file = '../output/asqp_results_v2/llama8b_neutral.json'
 
     if args.model_type == 'bert_bilstm_attention':
         texts, labels = prepare_data(pos_neg_file, neutral_file)

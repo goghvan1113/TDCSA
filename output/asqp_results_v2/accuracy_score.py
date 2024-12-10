@@ -2,13 +2,13 @@ import json
 
 # 定义要读取的JSON文件及其对应的LLM类型
 json_files = {
-    'llama3b': 'sentiment_asqp_results_corpus_expand_llama3b.json',
-    'llama8b': 'sentiment_asqp_results_corpus_expand_llama8b.json',
-    'llama70b': 'sentiment_asqp_results_corpus_expand_llama70b.json',
-    'llama405b': 'sentiment_asqp_results_corpus_expand_llama405b.json',
-    'deepseek': 'sentiment_asqp_results_corpus_expand_deepseek.json',
-    'gpt3.5': 'sentiment_asqp_results_corpus_expand_gpt3.5.json',
-    'gpt4o': 'sentiment_asqp_results_corpus_expand_gpt4o.json',
+    'llama3b': 'llama3b.json',
+    'llama8b': 'llama8b.json',
+    'llama70b': 'llama70b.json',
+    'llama405b': 'llama405b.json',
+    'deepseek': 'deepseek.json',
+    'gpt3.5': 'gpt3.5.json',
+    'gpt4o': 'gpt4o.json',
     # 可以在这里添加其他的json文件
 }
 
