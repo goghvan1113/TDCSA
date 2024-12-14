@@ -27,18 +27,6 @@ def seed_everything(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-nvidia_model = "meta/llama-3.1-405b-instruct"
-nvidia_url = "https://integrate.api.nvidia.com/v1"
-api_key_1 = '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'  ## 1663653541
-api_key_2 = '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'  # gaof23@mails
-api_call_count = 0
-max_api_calls = 950
-deepseek_api = "sk-47cf9e5ebda644b4b8dd48e5a9c1268d"
-deepseek_url = "https://api.deepseek.com/v1"
-deepseek_model = "deepseek-chat"
-deepbricks_api = "sk-ybgZNYqegwDjhGRDZKIHOYoYQLWTCSLh52Qbv0uF81J0U3n0"
-deepbricks_url = "https://api.deepbricks.ai/v1/"
-deepbricks_model = "gpt-3.5-turbo"
 
 
 def extract_sentiment_quadruples(text, sentiment, tokenizer, model, device, with_api=False):

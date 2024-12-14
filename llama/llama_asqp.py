@@ -30,15 +30,14 @@ class SentimentQuadrupleExtractor:
 
         # Default API configuration
         self.api_config = {
-            'deepbricks_api': "sk-ybgZNYqegwDjhGRDZKIHOYoYQLWTCSLh52Qbv0uF81J0U3n0",
+            'deepbricks_api': "yourapikey",
             'deepbricks_url': "https://api.deepbricks.ai/v1/",
             'deepbricks_model': "LLama-3.1-70b",
-            'deepseek_api': "sk-47cf9e5ebda644b4b8dd48e5a9c1268d",
+            'deepseek_api': "yourapikey",
             'deepseek_url': "https://api.deepseek.com/v1",
             'deepseek_model': "deepseek-chat",
-            'modelscope_api': "a0c23353-5040-49da-8b56-1f6d44c1f41c",
+            'modelscope_api': "yourapikey",
             'modelscope_url': "https://api-inference.modelscope.cn/v1/",
-            'gemini_api': "AIzaSyAw36pxwPN8A6H3wJKFHSyG0hOGdYHmSto",
         }
         if api_config:
             self.api_config.update(api_config)
