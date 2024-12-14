@@ -1312,9 +1312,8 @@ def seed_everything(seed):
 
 def main(args):
     # 加载数据
-    pos_neg_quad = f'../output/sentiment_asqp_results_corpus_expand_llama405b.json'
-    neu_quad = f'../output/sentiment_asqp_results_corpus_expand_llama8b_neutral.json'
-    quad_file_verified = f'../output/quad_results_v1/sentiment_asqp_results_corpus_expand_verified_gpt4o.json'
+    pos_neg_quad = f'../output/asqp_results_v2/llama8b.json'
+    neu_quad = f'../output/asqp_results_v2/llama8b_neutral.json'
     corpus_file = '../data/citation_sentiment_corpus_expand.csv'
     pos_neg_samples, neutral_samples = load_asqp_data(pos_neg_quad, neu_quad)
 
@@ -1341,11 +1340,11 @@ def main(args):
         split_data,
         tokenizer,
         with_asqp=True,  # 在这进行tokenize
-        method='random_polar' # ['random_mask', 'random_words', 'random_polar', 'empty', 'original', 'random_multi']
+        method='random_multi' # ['random_mask', 'random_words', 'random_polar', 'empty', 'original', 'random_multi']
     )
 
     # 训练模型并获取最佳模型路径
-    # best_model_path = train_asqp_model(args, train_dataset, val_dataset)
+    best_model_path = train_asqp_model(args, train_dataset, val_dataset)
 
     best_model_path = f'./finetuned_models/{args.model_name}/best_model'
     config = QuadAspectEnhancedBertConfig.from_pretrained(best_model_path)
@@ -1357,22 +1356,22 @@ def main(args):
     # print(val_results['classification_report'])
 
     print("\nTest Set Results with Full Analysis:")
-    evaluator.visualize_custom_input()
-    # test_results = evaluator.evaluate(
-    #     test_dataset,
-    #     error_analysis=False,
-    #     dimension_reduction='tsne',  # 或 'umap'
-    #     plot_embeddings=False,
-    #     attention_visualization=False,
-    #     viz_samples=3  # 每类选择5个样本进行注意力可视化
-    # )
-    # print(test_results['classification_report'])
+    # evaluator.visualize_custom_input()
+    test_results = evaluator.evaluate(
+        test_dataset,
+        error_analysis=False,
+        dimension_reduction='tsne',  # 或 'umap'
+        plot_embeddings=False,
+        attention_visualization=False,
+        viz_samples=3  # 每类选择5个样本进行注意力可视化
+    )
+    print(test_results['classification_report'])
     
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=41)
-    parser.add_argument("--model_name", type=str, default="roberta-llama3.1405B-twitter-sentiment")
+    parser.add_argument("--model_name", type=str, default="scibert-scivocab-uncased")
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--learning_rate", type=float, default=2e-5)
     parser.add_argument("--batch_size", type=int, default=32)

@@ -112,7 +112,7 @@ class SentimentQuadrupleExtractor:
 
         Text: However, one of the major limitations of these advances is the structured syntactic knowledge, which is important to global reordering, has not been well exploited.
         Sentiment Quadruples:
-        [("structured syntactic knowledge", "has not been well exploited", "LIMITATION", "negative", 0.90), ("syntactic knowledge", "important", "METHODOLOGY", "positive", 0.88)]
+        [("structured syntactic knowledge", "has not been well exploited", "LIMITATION", "negative", 0.90)]
 
         Special Cases to Consider:
         1. Implicit Opinions:
